@@ -217,6 +217,27 @@ body {
   border-radius: 10px;
 }
 
+/* Triage filter row (All Tabs / Stale toggle) */
+.triage-filter-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+/* Badges pinned to the right of the triage card meta row */
+.card-badges {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.sleeping-badge {
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
+  display: none;
+}
+
 /* Triage Card */
 .card-wrapper {
   display: flex;
@@ -774,6 +795,17 @@ body {
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
+}
+
+.form-row-split {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-fetch-models {
+  padding: 2px 8px;
+  font-size: 10px;
 }
 
 .form-group input, .form-group select {

@@ -28,13 +28,14 @@ import {
   clusterTabsWithAI,
   getTabTakeaway,
   getDeepSummary,
-  fetchAvailableModels
+  fetchAvailableModels,
+  DEFAULT_MODEL
 } from "../lib/gemini.js";
 
 // State
 let appSettings = {
   geminiApiKey: "",
-  model: "gemini-3.6-flash",
+  model: DEFAULT_MODEL,
   staleHours: 24,
   autoPromptThreshold: 15
 };
@@ -43,6 +44,8 @@ let triageFilterStaleOnly = false; // false = All tabs (oldest first), true = ol
 let triageQueue = [];
 let currentTriageIndex = 0;
 let cachedVaultItems = [];
+let vaultShowAll = false;
+const VAULT_RENDER_LIMIT = 200;
 let currentCardTabInfo = null;
 let currentTakeawayAbortController = null;
 let triageDebounceTimer = null;
@@ -104,13 +107,16 @@ const btnSaveSettings = document.getElementById("btn-save-settings");
 
 // Toast
 const toast = document.getElementById("toast");
+let toastTimer = null;
 
 function showToast(message, durationMs = 2800) {
   if (!toast) return;
   toast.textContent = message;
   toast.classList.remove("hidden");
-  setTimeout(() => {
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
     toast.classList.add("hidden");
+    toastTimer = null;
   }, durationMs);
 }
 
@@ -231,6 +237,7 @@ function setupEventListeners() {
   // Vault Actions
   if (vaultSearchInput) {
     vaultSearchInput.addEventListener("input", () => {
+      vaultShowAll = false;
       renderVaultItems(vaultSearchInput.value);
     });
   }
@@ -277,10 +284,16 @@ function setupEventListeners() {
           }
           if (models.includes(appSettings.model)) {
             selectModel.value = appSettings.model;
-          } else if (models.includes("gemini-3.6-flash")) {
-            selectModel.value = "gemini-3.6-flash";
+          } else if (models.includes(DEFAULT_MODEL)) {
+            selectModel.value = DEFAULT_MODEL;
           } else {
             selectModel.value = models[0];
+          }
+          // If the assignment didn't take (value not among options),
+          // fall back to the custom input so the model isn't lost.
+          if (!selectModel.value) {
+            selectModel.value = "custom";
+            if (inputCustomModel) inputCustomModel.value = appSettings.model;
           }
           customModelContainer?.classList.add("hidden");
           showToast(`Loaded ${models.length} models from your Google account!`);
@@ -339,11 +352,11 @@ function switchView(viewName) {
   });
 
   if (viewName === "triage") {
-    loadTriageQueue();
+    loadTriageQueue().catch(err => console.warn("Triage load error:", err));
   } else if (viewName === "groups") {
-    refreshGroupsView();
+    refreshGroupsView().catch(err => console.warn("Groups refresh error:", err));
   } else if (viewName === "vault") {
-    loadVault();
+    loadVault().catch(err => console.warn("Vault load error:", err));
   }
 }
 
@@ -484,6 +497,17 @@ async function handleTriageSummarize() {
   btnTriageSummarize.disabled = true;
 
   try {
+    // If the user clicked before the takeaway pass captured page content,
+    // fetch a fresh snippet so the deep summary isn't running on empty input.
+    if (!currentCardTabInfo.snippet && !currentCardTabInfo.discarded && currentCardTabInfo.id) {
+      try {
+        const fresh = await getPageSnippet(currentCardTabInfo.id);
+        currentCardTabInfo.description = currentCardTabInfo.description || fresh.description;
+        currentCardTabInfo.snippet = fresh.snippet;
+      } catch (err) {
+        console.warn("Fresh snippet fetch failed:", err);
+      }
+    }
     const deepResult = await getDeepSummary(appSettings.geminiApiKey, currentCardTabInfo, appSettings.model);
     await addToVault({
       url: currentCardTabInfo.url,
@@ -735,6 +759,7 @@ async function refreshGroupsView() {
 
 async function loadVault() {
   cachedVaultItems = await getVaultItems();
+  vaultShowAll = false;
   if (vaultBadge) vaultBadge.textContent = String(cachedVaultItems.length);
   renderVaultItems(vaultSearchInput ? vaultSearchInput.value : "");
 }
@@ -749,7 +774,8 @@ function renderVaultItems(query = "") {
   }
   vaultEmpty.classList.add("hidden");
 
-  for (const item of filtered) {
+  const visible = vaultShowAll ? filtered : filtered.slice(0, VAULT_RENDER_LIMIT);
+  for (const item of visible) {
     const card = document.createElement("div");
     card.className = "vault-item-card";
 
@@ -762,7 +788,13 @@ function renderVaultItems(query = "") {
     metaEl.className = "vault-item-meta";
     let domain = item.url;
     try { domain = new URL(item.url).hostname; } catch {}
-    metaEl.innerHTML = `<span>${domain} • ${formatTimeAgo(item.stashedAt)}</span><span>⏱️ ${item.readTime || "3 min"}</span>`;
+    // textContent (not innerHTML): readTime originates from the AI model.
+    const domainSpan = document.createElement("span");
+    domainSpan.textContent = `${domain} • ${formatTimeAgo(item.stashedAt)}`;
+    const readTimeSpan = document.createElement("span");
+    readTimeSpan.textContent = `⏱️ ${item.readTime || "3 min"}`;
+    metaEl.appendChild(domainSpan);
+    metaEl.appendChild(readTimeSpan);
 
     card.appendChild(titleEl);
     card.appendChild(metaEl);
@@ -809,6 +841,17 @@ function renderVaultItems(query = "") {
 
     vaultItemsContainer.appendChild(card);
   }
+
+  if (!vaultShowAll && filtered.length > visible.length) {
+    const showAllBtn = document.createElement("button");
+    showAllBtn.className = "secondary-btn";
+    showAllBtn.textContent = `Show all ${filtered.length} items`;
+    showAllBtn.addEventListener("click", () => {
+      vaultShowAll = true;
+      renderVaultItems(query);
+    });
+    vaultItemsContainer.appendChild(showAllBtn);
+  }
 }
 
 async function handleCopyMarkdown() {
@@ -844,8 +887,8 @@ async function openSettingsModal() {
   }
   inputApiKey.value = appSettings.geminiApiKey || "";
   selectStaleHours.value = String(appSettings.staleHours || 24);
-  
-  const currentModel = appSettings.model || "gemini-3.6-flash";
+
+  const currentModel = appSettings.model || DEFAULT_MODEL;
   const knownOptions = Array.from(selectModel.options).map(o => o.value);
   if (knownOptions.includes(currentModel) && currentModel !== "custom") {
     selectModel.value = currentModel;
@@ -865,7 +908,7 @@ function closeSettingsModal() {
 async function handleSaveSettings() {
   let chosenModel = selectModel.value;
   if (chosenModel === "custom") {
-    chosenModel = inputCustomModel?.value?.trim() || "gemini-3.6-flash";
+    chosenModel = inputCustomModel?.value?.trim() || DEFAULT_MODEL;
   }
 
   const updated = await saveSettings({

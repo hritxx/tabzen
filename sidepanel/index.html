@@ -50,7 +50,7 @@
         <span id="triage-progress" class="counter-text">0 of 0</span>
       </div>
 
-      <div class="triage-filter-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div class="triage-filter-row">
         <div class="pill-toggle">
           <button id="btn-triage-all" class="pill-btn active" type="button">All Tabs</button>
           <button id="btn-triage-stale" class="pill-btn" type="button">Stale (>24h)</button>
@@ -65,8 +65,8 @@
               <img id="card-favicon" class="favicon" src="../icons/icon-16.png" alt="icon">
               <span id="card-hostname" class="domain-text">example.com</span>
             </div>
-            <div style="display:flex; gap:6px; align-items:center;">
-              <span id="card-sleeping-indicator" class="age-badge" style="background:rgba(99,102,241,0.15); color:#6366f1; display:none;">💤 Sleeping</span>
+            <div class="card-badges">
+              <span id="card-sleeping-indicator" class="age-badge sleeping-badge">💤 Sleeping</span>
               <span id="card-age" class="age-badge">2 days ago</span>
             </div>
           </div>
@@ -207,9 +207,9 @@
         </div>
 
         <div class="form-group">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div class="form-row-split">
             <label for="select-model">AI Model</label>
-            <button id="btn-fetch-models" type="button" class="secondary-btn" style="padding: 2px 8px; font-size: 10px;" title="Query Google API for models supported on your key">🔄 Load Available Models</button>
+            <button id="btn-fetch-models" type="button" class="secondary-btn btn-fetch-models" title="Query Google API for models supported on your key">🔄 Load Available Models</button>
           </div>
           <select id="select-model">
             <optgroup id="optgroup-standard-models" label="Supported Gemini Models">

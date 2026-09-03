@@ -1,5 +1,8 @@
 // TabZen Service Worker (Manifest V3)
 
+import { DEFAULT_MODEL } from "../lib/gemini.js";
+import { isManageableTab } from "../lib/tab-manager.js";
+
 // 1. Configure Side Panel behavior to open on extension action click
 chrome.runtime.onInstalled.addListener(async () => {
   try {
@@ -16,7 +19,7 @@ chrome.runtime.onInstalled.addListener(async () => {
     await chrome.storage.local.set({
       settings: {
         geminiApiKey: "",
-        model: "gemini-2.5-flash",
+        model: DEFAULT_MODEL,
         staleHours: 24,
         autoPromptThreshold: 15
       },
@@ -26,6 +29,12 @@ chrome.runtime.onInstalled.addListener(async () => {
   }
 
   // Create periodic alarm to check stale tabs every hour
+  chrome.alarms.create("checkStaleTabs", { periodInMinutes: 60 });
+  await updateTabCountBadge();
+});
+
+// Alarms can be cleared on browser restart — recreate on startup.
+chrome.runtime.onStartup.addListener(async () => {
   chrome.alarms.create("checkStaleTabs", { periodInMinutes: 60 });
   await updateTabCountBadge();
 });
@@ -82,8 +91,8 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 async function updateTabCountBadge() {
   try {
     const tabs = await chrome.tabs.query({});
-    // Filter out internal tabs
-    const validTabs = tabs.filter(t => t.url && !t.url.startsWith("chrome://") && !t.url.startsWith("brave://"));
+    // Same manageability rules as triage so the badge and panel agree.
+    const validTabs = tabs.filter(isManageableTab);
     const count = validTabs.length;
     await chrome.action.setBadgeText({ text: count > 0 ? String(count) : "" });
     await chrome.action.setBadgeBackgroundColor({ color: "#6366F1" });

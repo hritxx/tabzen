@@ -348,13 +348,19 @@ function switchView(viewName) {
 async function refreshTabCounts() {
   const currentTabs = await getManageableTabs();
   const allTabs = await getAllManageableTabs();
+  
+  const currentSleeping = currentTabs.filter(t => t.discarded).length;
+  const allSleeping = allTabs.filter(t => t.discarded).length;
+
   if (headerTabCount) {
     if (allTabs.length > currentTabs.length) {
-      headerTabCount.textContent = `${currentTabs.length} tabs (${allTabs.length} total)`;
-      headerTabCount.title = `${currentTabs.length} tabs in this window, ${allTabs.length} across all windows`;
+      const sleepStr = allSleeping > 0 ? ` • 💤 ${allSleeping}` : "";
+      headerTabCount.textContent = `${currentTabs.length} tabs (${allTabs.length} total${sleepStr})`;
+      headerTabCount.title = `${currentTabs.length} tabs in this window (${currentSleeping} sleeping), ${allTabs.length} across all windows (${allSleeping} sleeping)`;
     } else {
-      headerTabCount.textContent = `${currentTabs.length} tabs`;
-      headerTabCount.title = "Total open tabs";
+      const sleepStr = currentSleeping > 0 ? ` (💤 ${currentSleeping} sleeping)` : "";
+      headerTabCount.textContent = `${currentTabs.length} tabs${sleepStr}`;
+      headerTabCount.title = `${currentTabs.length} open tabs, ${currentSleeping} sleeping in background`;
     }
   }
 }

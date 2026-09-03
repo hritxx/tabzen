@@ -55,7 +55,6 @@
           <button id="btn-triage-all" class="pill-btn active" type="button">All Tabs</button>
           <button id="btn-triage-stale" class="pill-btn" type="button">Stale (>24h)</button>
         </div>
-        <span id="card-sleeping-indicator" class="hint" style="font-size:10px; color:var(--text-muted); display:none;">💤 Sleeping Tab</span>
       </div>
 
       <div id="triage-card-wrapper" class="card-wrapper">
@@ -66,7 +65,10 @@
               <img id="card-favicon" class="favicon" src="../icons/icon-16.png" alt="icon">
               <span id="card-hostname" class="domain-text">example.com</span>
             </div>
-            <span id="card-age" class="age-badge">2 days ago</span>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <span id="card-sleeping-indicator" class="age-badge" style="background:rgba(99,102,241,0.15); color:#6366f1; display:none;">💤 Sleeping</span>
+              <span id="card-age" class="age-badge">2 days ago</span>
+            </div>
           </div>
 
           <h3 id="card-title" class="card-title">Loading tab...</h3>

@@ -29,7 +29,12 @@ import {
 } from "../lib/gemini.js";
 
 // State
-let appSettings = null;
+let appSettings = {
+  geminiApiKey: "",
+  model: "gemini-2.5-flash",
+  staleHours: 24,
+  autoPromptThreshold: 15
+};
 let triageQueue = [];
 let currentTriageIndex = 0;
 let cachedVaultItems = [];
@@ -82,9 +87,6 @@ const btnSaveSettings = document.getElementById("btn-save-settings");
 // Toast
 const toast = document.getElementById("toast");
 
-/**
- * Show a floating toast message
- */
 function showToast(message, durationMs = 2600) {
   if (!toast) return;
   toast.textContent = message;
@@ -94,9 +96,6 @@ function showToast(message, durationMs = 2600) {
   }, durationMs);
 }
 
-/**
- * Format relative time (e.g. "3 days ago")
- */
 function formatTimeAgo(timestamp) {
   if (!timestamp) return "Recently";
   const diffMs = Date.now() - timestamp;
@@ -107,23 +106,46 @@ function formatTimeAgo(timestamp) {
   return `${days}d ago`;
 }
 
-/**
- * Initialize application
- */
+// 1. Hook up all event listeners immediately so buttons are instantly responsive
+setupEventListeners();
+
+// 2. Boot background data loaders
+initApp();
+
 async function initApp() {
-  appSettings = await getSettings();
-  setupEventListeners();
-  await refreshTabCounts();
-  await loadTriageQueue();
-  await refreshGroupsView();
-  await loadVault();
+  try {
+    appSettings = await getSettings();
+  } catch (err) {
+    console.warn("Could not load settings:", err);
+  }
+
+  try {
+    await refreshTabCounts();
+  } catch (err) {
+    console.warn("Could not refresh tab counts:", err);
+  }
+
+  try {
+    await loadTriageQueue();
+  } catch (err) {
+    console.warn("Could not load triage queue:", err);
+  }
+
+  try {
+    await refreshGroupsView();
+  } catch (err) {
+    console.warn("Could not refresh groups:", err);
+  }
+
+  try {
+    await loadVault();
+  } catch (err) {
+    console.warn("Could not load vault:", err);
+  }
 }
 
-/**
- * Setup UI Event Listeners
- */
 function setupEventListeners() {
-  // Navigation
+  // Navigation tabs
   navButtons.forEach(btn => {
     btn.addEventListener("click", () => {
       const targetView = btn.getAttribute("data-view");
@@ -132,59 +154,64 @@ function setupEventListeners() {
   });
 
   // Triage Card Actions
-  btnTriageSummarize.addEventListener("click", handleTriageSummarize);
-  btnTriageStash.addEventListener("click", handleTriageStash);
-  btnTriageKeep.addEventListener("click", handleTriageKeep);
-  btnRefreshTriage.addEventListener("click", async () => {
+  if (btnTriageSummarize) btnTriageSummarize.addEventListener("click", handleTriageSummarize);
+  if (btnTriageStash) btnTriageStash.addEventListener("click", handleTriageStash);
+  if (btnTriageKeep) btnTriageKeep.addEventListener("click", handleTriageKeep);
+  if (btnRefreshTriage) btnRefreshTriage.addEventListener("click", async () => {
     await loadTriageQueue(true);
   });
-  cardTitle.addEventListener("click", () => {
+  if (cardTitle) cardTitle.addEventListener("click", () => {
     if (currentCardTabInfo?.id) {
       activateTab(currentCardTabInfo.id);
     }
   });
 
   // Groups Actions
-  btnAutoCluster.addEventListener("click", handleAutoCluster);
+  if (btnAutoCluster) btnAutoCluster.addEventListener("click", handleAutoCluster);
 
   // Vault Actions
-  vaultSearchInput.addEventListener("input", () => {
-    renderVaultItems(vaultSearchInput.value);
-  });
-  btnCopyMarkdown.addEventListener("click", handleCopyMarkdown);
-  btnDownloadMarkdown.addEventListener("click", handleDownloadMarkdown);
+  if (vaultSearchInput) {
+    vaultSearchInput.addEventListener("input", () => {
+      renderVaultItems(vaultSearchInput.value);
+    });
+  }
+  if (btnCopyMarkdown) btnCopyMarkdown.addEventListener("click", handleCopyMarkdown);
+  if (btnDownloadMarkdown) btnDownloadMarkdown.addEventListener("click", handleDownloadMarkdown);
 
-  // Settings Modal
-  btnOpenSettings.addEventListener("click", openSettingsModal);
-  btnCloseSettings.addEventListener("click", closeSettingsModal);
-  settingsModal.addEventListener("click", (e) => {
-    if (e.target === settingsModal) closeSettingsModal();
-  });
-  btnToggleKeyVisibility.addEventListener("click", () => {
-    if (inputApiKey.type === "password") {
-      inputApiKey.type = "text";
-      btnToggleKeyVisibility.textContent = "Hide";
-    } else {
-      inputApiKey.type = "password";
-      btnToggleKeyVisibility.textContent = "Show";
-    }
-  });
-  btnSaveSettings.addEventListener("click", handleSaveSettings);
+  // Settings Modal Actions
+  if (btnOpenSettings) btnOpenSettings.addEventListener("click", openSettingsModal);
+  if (btnCloseSettings) btnCloseSettings.addEventListener("click", closeSettingsModal);
+  if (settingsModal) {
+    settingsModal.addEventListener("click", (e) => {
+      if (e.target === settingsModal) closeSettingsModal();
+    });
+  }
+  if (btnToggleKeyVisibility) {
+    btnToggleKeyVisibility.addEventListener("click", () => {
+      if (inputApiKey.type === "password") {
+        inputApiKey.type = "text";
+        btnToggleKeyVisibility.textContent = "Hide";
+      } else {
+        inputApiKey.type = "password";
+        btnToggleKeyVisibility.textContent = "Show";
+      }
+    });
+  }
+  if (btnSaveSettings) btnSaveSettings.addEventListener("click", handleSaveSettings);
 
-  // Listen to tab events to update counts live
-  chrome.tabs.onCreated.addListener(() => refreshTabCounts());
-  chrome.tabs.onRemoved.addListener(() => {
-    refreshTabCounts();
-    refreshGroupsView();
-  });
-  chrome.tabs.onUpdated.addListener((_, info) => {
-    if (info.status === "complete") refreshTabCounts();
-  });
+  // Browser Tab Events
+  if (chrome?.tabs) {
+    chrome.tabs.onCreated.addListener(() => refreshTabCounts());
+    chrome.tabs.onRemoved.addListener(() => {
+      refreshTabCounts();
+      refreshGroupsView();
+    });
+    chrome.tabs.onUpdated.addListener((_, info) => {
+      if (info.status === "complete") refreshTabCounts();
+    });
+  }
 }
 
-/**
- * Switch Active View
- */
 function switchView(viewName) {
   navButtons.forEach(b => {
     if (b.getAttribute("data-view") === viewName) {
@@ -209,35 +236,28 @@ function switchView(viewName) {
   }
 }
 
-/**
- * Update Header Tab Count
- */
 async function refreshTabCounts() {
   const tabs = await getManageableTabs();
-  headerTabCount.textContent = `${tabs.length} tabs`;
+  if (headerTabCount) {
+    headerTabCount.textContent = `${tabs.length} tabs`;
+  }
 }
 
-/**
- * Load and render Triage Queue
- */
 async function loadTriageQueue(includeAll = false) {
-  const staleHours = Number(appSettings.staleHours) || 24;
+  const staleHours = Number(appSettings?.staleHours) || 24;
   triageQueue = includeAll ? await getManageableTabs() : await getStaleTabs(staleHours);
   currentTriageIndex = 0;
-  triageBadge.textContent = String(triageQueue.length);
+  if (triageBadge) triageBadge.textContent = String(triageQueue.length);
 
-  renderCurrentTriageCard();
+  await renderCurrentTriageCard();
 }
 
-/**
- * Render the current card in the Triage Deck
- */
 async function renderCurrentTriageCard() {
-  if (triageQueue.length === 0 || currentTriageIndex >= triageQueue.length) {
+  if (!triageQueue || triageQueue.length === 0 || currentTriageIndex >= triageQueue.length) {
     triageCard.classList.add("hidden");
     triageEmpty.classList.remove("hidden");
     triageProgress.textContent = "0 of 0";
-    triageBadge.textContent = "0";
+    if (triageBadge) triageBadge.textContent = "0";
     currentCardTabInfo = null;
     return;
   }
@@ -249,7 +269,7 @@ async function renderCurrentTriageCard() {
   currentCardTabInfo = tab;
 
   triageProgress.textContent = `${currentTriageIndex + 1} of ${triageQueue.length}`;
-  triageBadge.textContent = String(triageQueue.length - currentTriageIndex);
+  if (triageBadge) triageBadge.textContent = String(triageQueue.length - currentTriageIndex);
 
   cardTitle.textContent = tab.title || "Untitled Tab";
   cardFavicon.src = tab.favIconUrl || "../icons/icon-16.png";
@@ -266,12 +286,13 @@ async function renderCurrentTriageCard() {
   cardReadTime.textContent = "⏱️ Estimating...";
   cardTakeaway.textContent = "Analyzing page content with Gemini...";
 
-  // Fetch page content and generate quick takeaway
+  // Fetch page content
   const content = await getPageSnippet(tab.id);
   const tabData = {
     id: tab.id,
     title: tab.title,
     url: tab.url,
+    favIconUrl: tab.favIconUrl,
     description: content.description,
     snippet: content.snippet
   };
@@ -285,13 +306,10 @@ async function renderCurrentTriageCard() {
   currentCardTabInfo.readTime = result.readTime;
 }
 
-/**
- * Action: Summarize & Close
- */
 async function handleTriageSummarize() {
   if (!currentCardTabInfo) return;
-  const originalText = btnTriageSummarize.innerHTML;
-  btnTriageSummarize.innerHTML = "<span class="btn-icon">⏳</span><span class="btn-text">Summarizing...</span>";
+  const originalHtml = btnTriageSummarize.innerHTML;
+  btnTriageSummarize.innerHTML = `<span class="btn-icon">⏳</span><span class="btn-text">Summarizing...</span>`;
   btnTriageSummarize.disabled = true;
 
   try {
@@ -312,16 +330,13 @@ async function handleTriageSummarize() {
     await refreshTabCounts();
     await loadVault();
   } catch (err) {
-    showToast("Error summarizing tab: " + err.message);
+    showToast("Error: " + err.message);
   } finally {
-    btnTriageSummarize.innerHTML = originalText;
+    btnTriageSummarize.innerHTML = originalHtml;
     btnTriageSummarize.disabled = false;
   }
 }
 
-/**
- * Action: Stash in Vault & Close
- */
 async function handleTriageStash() {
   if (!currentCardTabInfo) return;
   try {
@@ -341,24 +356,18 @@ async function handleTriageStash() {
     await refreshTabCounts();
     await loadVault();
   } catch (err) {
-    showToast("Error stashing tab: " + err.message);
+    showToast("Error: " + err.message);
   }
 }
 
-/**
- * Action: Keep Open (Snooze)
- */
 function handleTriageKeep() {
   currentTriageIndex++;
   renderCurrentTriageCard();
 }
 
-/**
- * Auto-Cluster Tabs with AI
- */
 async function handleAutoCluster() {
-  const originalText = btnAutoCluster.innerHTML;
-  btnAutoCluster.innerHTML = "<span class="btn-icon">⏳</span><span>Clustering tabs with AI...</span>";
+  const originalHtml = btnAutoCluster.innerHTML;
+  btnAutoCluster.innerHTML = `<span class="btn-icon">⏳</span><span>Clustering tabs with AI...</span>`;
   btnAutoCluster.disabled = true;
 
   try {
@@ -376,14 +385,11 @@ async function handleAutoCluster() {
   } catch (err) {
     showToast("Clustering error: " + err.message);
   } finally {
-    btnAutoCluster.innerHTML = originalText;
+    btnAutoCluster.innerHTML = originalHtml;
     btnAutoCluster.disabled = false;
   }
 }
 
-/**
- * Render Groups View
- */
 async function refreshGroupsView() {
   const tabs = await getManageableTabs();
   const groups = await getActiveTabGroups();
@@ -403,9 +409,12 @@ async function refreshGroupsView() {
     }
   }
 
-  // Render Brave Groups
+  // Render Groups
   if (groups.length === 0) {
-    groupsList.innerHTML = "<p style="font-size:12px; color:var(--text-secondary);">No tab groups created yet. Click Auto-Cluster above!</p>";
+    const emptyP = document.createElement("p");
+    emptyP.style.cssText = "font-size:12px; color:var(--text-secondary);";
+    emptyP.textContent = "No tab groups created yet. Click Auto-Cluster above!";
+    groupsList.appendChild(emptyP);
   } else {
     for (const group of groups) {
       const gTabs = groupedTabsMap[group.id] || [];
@@ -440,7 +449,6 @@ async function refreshGroupsView() {
       header.appendChild(closeGroupBtn);
       card.appendChild(header);
 
-      // Tabs inside group
       for (const t of gTabs) {
         const row = document.createElement("div");
         row.className = "group-tab-row";
@@ -472,7 +480,10 @@ async function refreshGroupsView() {
 
   // Render Ungrouped Tabs
   if (ungroupedTabs.length === 0) {
-    ungroupedList.innerHTML = "<p style="font-size:12px; color:var(--text-secondary);">All tabs are grouped.</p>";
+    const emptyP = document.createElement("p");
+    emptyP.style.cssText = "font-size:12px; color:var(--text-secondary);";
+    emptyP.textContent = "All tabs are grouped.";
+    ungroupedList.appendChild(emptyP);
   } else {
     for (const t of ungroupedTabs) {
       const row = document.createElement("div");
@@ -501,18 +512,12 @@ async function refreshGroupsView() {
   }
 }
 
-/**
- * Load Vault items
- */
 async function loadVault() {
   cachedVaultItems = await getVaultItems();
-  vaultBadge.textContent = String(cachedVaultItems.length);
-  renderVaultItems(vaultSearchInput.value);
+  if (vaultBadge) vaultBadge.textContent = String(cachedVaultItems.length);
+  renderVaultItems(vaultSearchInput ? vaultSearchInput.value : "");
 }
 
-/**
- * Render filtered Vault items
- */
 function renderVaultItems(query = "") {
   const filtered = searchVault(cachedVaultItems, query);
   vaultItemsContainer.innerHTML = "";
@@ -585,9 +590,6 @@ function renderVaultItems(query = "") {
   }
 }
 
-/**
- * Copy Vault to Markdown
- */
 async function handleCopyMarkdown() {
   if (cachedVaultItems.length === 0) {
     showToast("Vault is empty.");
@@ -598,9 +600,6 @@ async function handleCopyMarkdown() {
   showToast("📋 Copied all vault summaries to clipboard!");
 }
 
-/**
- * Download Vault as Markdown file
- */
 function handleDownloadMarkdown() {
   if (cachedVaultItems.length === 0) {
     showToast("Vault is empty.");
@@ -618,26 +617,20 @@ function handleDownloadMarkdown() {
   showToast("📥 Downloaded vault markdown file!");
 }
 
-/**
- * Open Settings Modal
- */
-function openSettingsModal() {
+async function openSettingsModal() {
+  if (!appSettings) {
+    appSettings = await getSettings();
+  }
   inputApiKey.value = appSettings.geminiApiKey || "";
   selectStaleHours.value = String(appSettings.staleHours || 24);
   selectModel.value = appSettings.model || "gemini-2.5-flash";
   settingsModal.classList.remove("hidden");
 }
 
-/**
- * Close Settings Modal
- */
 function closeSettingsModal() {
   settingsModal.classList.add("hidden");
 }
 
-/**
- * Save Settings
- */
 async function handleSaveSettings() {
   const updated = await saveSettings({
     geminiApiKey: inputApiKey.value.trim(),
@@ -649,6 +642,3 @@ async function handleSaveSettings() {
   showToast("Settings saved successfully!");
   await loadTriageQueue();
 }
-
-// Boot app
-initApp();

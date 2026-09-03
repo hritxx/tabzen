@@ -37,7 +37,8 @@ let appSettings = {
   geminiApiKey: "",
   model: DEFAULT_MODEL,
   staleHours: 24,
-  autoPromptThreshold: 15
+  autoPromptThreshold: 15,
+  theme: "system"
 };
 let organizeScope = "current"; // "current" | "all"
 let triageFilterStaleOnly = false; // false = All tabs (oldest first), true = older than stale threshold
@@ -89,6 +90,7 @@ const settingsModal = document.getElementById("settings-modal");
 const inputApiKey = document.getElementById("input-api-key");
 const btnToggleKeyVisibility = document.getElementById("btn-toggle-key-visibility");
 const selectStaleHours = document.getElementById("select-stale-hours");
+const selectTheme = document.getElementById("select-theme");
 const selectModel = document.getElementById("select-model");
 const optgroupStandardModels = document.getElementById("optgroup-standard-models");
 const btnFetchModels = document.getElementById("btn-fetch-models");
@@ -121,6 +123,25 @@ function formatTimeAgo(timestamp) {
   return `${days}d ago`;
 }
 
+// Theme: explicit user choice (system/light/dark), resolved to a concrete
+// data-theme so CSS has a single dark branch. Follows OS changes while
+// set to "system".
+const systemThemeQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+
+function applyTheme() {
+  const pref = appSettings?.theme || "system";
+  const resolved = pref === "system"
+    ? (systemThemeQuery && systemThemeQuery.matches ? "dark" : "light")
+    : pref;
+  document.documentElement.dataset.theme = resolved;
+}
+
+if (systemThemeQuery && systemThemeQuery.addEventListener) {
+  systemThemeQuery.addEventListener("change", () => {
+    if ((appSettings?.theme || "system") === "system") applyTheme();
+  });
+}
+
 // 1. Hook up all event listeners immediately so buttons are instantly responsive
 setupEventListeners();
 
@@ -130,6 +151,7 @@ initApp();
 async function initApp() {
   try {
     appSettings = await getSettings();
+    applyTheme();
     updateStalePillLabel();
   } catch (err) {
     console.warn("Could not load settings:", err);
@@ -1088,6 +1110,7 @@ async function openSettingsModal() {
   }
   inputApiKey.value = appSettings.geminiApiKey || "";
   selectStaleHours.value = String(appSettings.staleHours || 24);
+  if (selectTheme) selectTheme.value = appSettings.theme || "system";
 
   const currentModel = appSettings.model || DEFAULT_MODEL;
   const knownOptions = Array.from(selectModel.options).map(o => o.value);
@@ -1115,9 +1138,11 @@ async function handleSaveSettings() {
   const updated = await saveSettings({
     geminiApiKey: inputApiKey.value.trim(),
     staleHours: Number(selectStaleHours.value),
-    model: chosenModel
+    model: chosenModel,
+    theme: selectTheme ? selectTheme.value : "system"
   });
   appSettings = updated;
+  applyTheme();
   updateStalePillLabel();
   closeSettingsModal();
   showToast(`Settings saved. Model: ${chosenModel}`);

@@ -27,28 +27,29 @@
   --shadow-md: 0 8px 20px -8px rgba(21, 27, 39, 0.14);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-primary: #0d1015;
-    --bg-surface: #151a22;
-    --bg-subtle: #1d232d;
-    --border: #262d38;
-    --border-strong: #333b49;
-    --text-primary: #e9ebf1;
-    --text-secondary: #9aa3b6;
-    --text-muted: #626b7e;
-    --accent: #dfe5f1;
-    --accent-hover: #ffffff;
-    --on-accent: #131927;
-    --accent-soft: rgba(223, 229, 241, 0.09);
-    --brass: #d3a24e;
-    --brass-soft: rgba(211, 162, 78, 0.13);
-    --success: #4caf7d;
-    --warning: #d69a3f;
-    --danger: #e0705f;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 10px 24px -8px rgba(0, 0, 0, 0.5);
-  }
+/* Explicit theme override. JS resolves "system" via matchMedia and sets
+   data-theme to "light" or "dark", so this single selector is the only
+   dark branch (no OS media query here). */
+:root[data-theme="dark"] {
+  --bg-primary: #0d1015;
+  --bg-surface: #151a22;
+  --bg-subtle: #1d232d;
+  --border: #262d38;
+  --border-strong: #333b49;
+  --text-primary: #e9ebf1;
+  --text-secondary: #9aa3b6;
+  --text-muted: #626b7e;
+  --accent: #dfe5f1;
+  --accent-hover: #ffffff;
+  --on-accent: #131927;
+  --accent-soft: rgba(223, 229, 241, 0.09);
+  --brass: #d3a24e;
+  --brass-soft: rgba(211, 162, 78, 0.13);
+  --success: #4caf7d;
+  --warning: #d69a3f;
+  --danger: #e0705f;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 10px 24px -8px rgba(0, 0, 0, 0.5);
 }
 
 * {

@@ -19,7 +19,7 @@
     <div class="header-actions">
       <span id="header-tab-count" class="tab-badge" title="Total open tabs">0 tabs</span>
       <button id="btn-open-settings" class="icon-btn" title="Settings" aria-label="Settings">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"/></svg>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2 4.5h12M2 8h12M2 11.5h12"/><circle cx="6" cy="4.5" r="1.9" fill="var(--bg-surface)"/><circle cx="11" cy="8" r="1.9" fill="var(--bg-surface)"/><circle cx="5" cy="11.5" r="1.9" fill="var(--bg-surface)"/></svg>
       </button>
     </div>
   </header>
@@ -173,6 +173,16 @@
             <option value="168">7 days unvisited</option>
           </select>
           <small class="hint">Tabs older than this will be prioritized for daily triage.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="select-theme">Appearance</label>
+          <select id="select-theme">
+            <option value="system" selected>System (follows OS)</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+          <small class="hint">Pick Light for the paper theme, Dark for the charcoal theme.</small>
         </div>
 
         <div class="form-group">

@@ -104,6 +104,7 @@ Key fields: MV3, `tabs`, `tabGroups`, `sidePanel`, `storage`, `alarms`, `scripti
 - Gemini API Key configuration input (stored in `chrome.storage.local`), with show/hide toggle.
 - Model selector (default `gemini-3.6-flash`; `🔄 Load Available Models` queries the key for supported models; custom model ID supported).
 - Stale threshold selector (12 / 24 / 48 / 72 hours, 7 days).
+- Appearance selector (System / Light / Dark), persisted and resolved to a concrete `data-theme` (follows OS changes while on System).
 - *Future (not implemented):* first-run setup banner, auto-prompt frequency (`autoPromptThreshold` is stored but currently unused).
 
 ---

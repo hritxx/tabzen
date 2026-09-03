@@ -2,7 +2,7 @@
 
 **Spec Reference:** `docs/superpowers/specs/2026-09-04-brave-tab-copilot-design.md`  
 **Date:** 2026-09-04  
-**Status:** In Progress  
+**Status:** Complete (all tasks delivered; see deltas below)
 
 ---
 
@@ -29,7 +29,7 @@ Build the **TabZen** Brave Extension (Manifest V3) as a zero-build vanilla ES mo
 - **Verification:** Validate JSON syntax and verify fields match MV3 requirements.
 
 ### Task 3: Background Service Worker
-- **Goal:** Manage side panel behavior (`openPanelOnActionClick: true`), track tab activity timestamps in `chrome.storage.local`, maintain tab count badges, and setup periodic alarms for unread tab notifications.
+- **Goal:** Manage side panel behavior (`openPanelOnActionClick: true`), track tab activity timestamps in `chrome.storage.local`, maintain tab count badges, and setup periodic alarms for badge refreshes.
 - **Files:** `background/service-worker.js`
 - **Verification:** Verify no global state variables, handles `chrome.action.setBadgeText`, and catches any initialization errors.
 
@@ -49,8 +49,8 @@ Build the **TabZen** Brave Extension (Manifest V3) as a zero-build vanilla ES mo
 - **Files:** `lib/tab-manager.js`
 - **Verification:** Verify proper error checks and color mapping.
 
-### Task 6: Gemini Flash AI Client (`lib/gemini.js`)
-- **Goal:** Direct HTTP client calling Google Generative Language API (`gemini-2.5-flash`):
+### Task 6: Gemini AI Client (`lib/gemini.js`)
+- **Goal:** Direct HTTP client calling Google Generative Language API (default `gemini-3.6-flash`, custom IDs supported):
   - Batch tab clustering prompt (returns structured groups)
   - 2-sentence takeaway & read time prompt
   - Deep 3-bullet summary prompt
@@ -71,7 +71,7 @@ Build the **TabZen** Brave Extension (Manifest V3) as a zero-build vanilla ES mo
 ### Task 8: Side Panel Application Controller (`sidepanel/app.js`)
 - **Goal:** Primary state machine:
   - View router (Triage, Groups, Vault)
-  - Triage Deck interaction (Summarize & Close, Stash, Snooze)
+  - Triage Deck interaction (Summarize & Close, Stash, Keep Open)
   - Auto-Cluster button handler with loading spinner
   - Real-time search in Vault
   - Copy and Download Markdown buttons
@@ -83,4 +83,13 @@ Build the **TabZen** Brave Extension (Manifest V3) as a zero-build vanilla ES mo
 - **Files:** `README.md`
 
 ### Task 10: End-to-End Verification
-- **Goal:** Verify complete file tree, test all JavaScript files for syntax errors using Node syntax check (`node -c`), and confirm extension is 100% ready for loading in Brave.
+- **Goal:** Verify complete file tree, test all JavaScript files for syntax errors using Node syntax check (`node --check <file>`), and confirm extension is ready for loading in Brave.
+
+---
+
+## Delivered deltas (beyond the original plan)
+
+- Multi-window support: current-window / all-windows scope + pull-and-consolidate.
+- Sleeping-tab preservation: extension-suspender URL unpacking, zero-RAM takeaways for discarded tabs.
+- Quota defense: LRU summary cache, 1.2s request serializer, 250ms card debounce + `AbortController` cancellation, 429 backoff with retry, 404 model auto-fallback, live model discovery.
+- Follow-up work is tracked in `docs/superpowers/specs/2026-09-03-tabzen-code-review-improvements.md`.

@@ -44,6 +44,8 @@ let triageQueue = [];
 let currentTriageIndex = 0;
 let cachedVaultItems = [];
 let currentCardTabInfo = null;
+let currentTakeawayAbortController = null;
+let triageDebounceTimer = null;
 
 // DOM Elements
 const headerTabCount = document.getElementById("header-tab-count");
@@ -412,38 +414,67 @@ async function renderCurrentTriageCard() {
     cardSleepingIndicator.style.display = tab.discarded ? "inline" : "none";
   }
 
+  // Cancel previous in-flight AI request and clear debounce timer
+  if (currentTakeawayAbortController) {
+    currentTakeawayAbortController.abort();
+    currentTakeawayAbortController = null;
+  }
+  if (triageDebounceTimer) {
+    clearTimeout(triageDebounceTimer);
+    triageDebounceTimer = null;
+  }
+
   cardReadTime.textContent = "⏱️ Estimating...";
   cardTakeaway.textContent = "Analyzing page with Gemini...";
 
-  try {
-    // Only attempt DOM extraction if tab is active (NOT discarded/sleeping)
-    let content = { description: "", snippet: "" };
-    if (!tab.discarded) {
-      content = await getPageSnippet(tab.id);
+  // 250ms debounce: avoids sending API calls when quickly skipping cards
+  triageDebounceTimer = setTimeout(async () => {
+    const controller = new AbortController();
+    currentTakeawayAbortController = controller;
+
+    try {
+      let content = { description: "", snippet: "" };
+      if (!tab.discarded) {
+        content = await getPageSnippet(tab.id);
+      }
+
+      if (controller.signal.aborted) return;
+
+      const tabData = {
+        id: tab.id,
+        title: tab.title,
+        url: tab.url,
+        favIconUrl: tab.favIconUrl,
+        description: content.description,
+        snippet: content.snippet,
+        discarded: tab.discarded
+      };
+
+      currentCardTabInfo = tabData;
+
+      const result = await getTabTakeaway(appSettings.geminiApiKey, tabData, appSettings.model, controller.signal);
+      if (!controller.signal.aborted) {
+        cardTakeaway.textContent = result.takeaway;
+        cardReadTime.textContent = `⏱️ ${result.readTime}`;
+        currentCardTabInfo.takeaway = result.takeaway;
+        currentCardTabInfo.readTime = result.readTime;
+      }
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        console.warn("Triage analysis error:", err);
+        if (err.message.includes("rate limit") || err.message.includes("429")) {
+          cardTakeaway.textContent = "⏳ Gemini quota cooldown. Takeaways will resume shortly.";
+        } else {
+          cardTakeaway.textContent = `Summary: ${tab.title}`;
+        }
+        cardReadTime.textContent = "⏱️ 3 min";
+      }
+    } finally {
+      if (currentTakeawayAbortController === controller) {
+        currentTakeawayAbortController = null;
+      }
     }
-
-    const tabData = {
-      id: tab.id,
-      title: tab.title,
-      url: tab.url,
-      favIconUrl: tab.favIconUrl,
-      description: content.description,
-      snippet: content.snippet,
-      discarded: tab.discarded
-    };
-
-    currentCardTabInfo = tabData;
-
-    const result = await getTabTakeaway(appSettings.geminiApiKey, tabData, appSettings.model);
-    cardTakeaway.textContent = result.takeaway;
-    cardReadTime.textContent = `⏱️ ${result.readTime}`;
-    currentCardTabInfo.takeaway = result.takeaway;
-    currentCardTabInfo.readTime = result.readTime;
-  } catch (err) {
-    console.warn("Triage analysis error:", err);
-    cardTakeaway.textContent = `Summary: ${tab.title}`;
-    cardReadTime.textContent = "⏱️ 3 min";
-  }
+  }, 250);
 }
 
 async function handleTriageSummarize() {

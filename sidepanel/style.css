@@ -279,11 +279,17 @@ body {
 }
 
 .card-title {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.35;
   cursor: pointer;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .card-title:hover {
@@ -299,7 +305,25 @@ body {
   background-color: var(--bg-subtle);
   border-left: 3px solid var(--accent);
   border-radius: 4px;
-  padding: 10px 12px;
+  padding: 8px 10px;
+  max-height: 130px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.card-summary-box::-webkit-scrollbar {
+  width: 4px;
+}
+
+.card-summary-box::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.card-summary-box::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
 }
 
 .summary-label {
@@ -312,16 +336,19 @@ body {
 }
 
 .summary-text {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text-primary);
   line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
 }
 
 /* Card Actions */
 .card-actions {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: 6px;
   margin-top: 4px;
 }
 
@@ -332,6 +359,7 @@ body {
   justify-content: center;
   gap: 4px;
   padding: 8px 4px;
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background-color: var(--bg-surface);
@@ -346,6 +374,10 @@ body {
 .action-btn .btn-text {
   font-size: 10px;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .btn-summarize {

@@ -365,6 +365,11 @@ body {
   white-space: normal;
 }
 
+.btn-generate {
+  margin-top: 8px;
+  width: 100%;
+}
+
 /* Card Actions */
 .card-actions {
   display: grid;

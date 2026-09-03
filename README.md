@@ -6,7 +6,7 @@ No build step, no dependencies. Pure ES modules, Manifest V3.
 
 ## Features
 
-- **Triage** — Review open tabs oldest-first with an AI takeaway and read-time estimate per tab. Summarize-and-close, stash, or keep each one.
+- **Triage** — Review open tabs oldest-first with an on-demand AI takeaway and read-time estimate. Summarize-and-close, stash, or keep each one. Swiping through cards makes zero API calls.
 - **Organize** — One-click semantic grouping into native tab groups. Scope to the current window, all windows, or pull every window into one.
 - **Vault** — Searchable local archive of closed articles with Markdown export for Obsidian, Notion, and Logseq.
 - **Efficient** — Sleeping and suspended tabs are handled without waking them. Summary caching, request pacing, and quota backoff keep Gemini API usage low.

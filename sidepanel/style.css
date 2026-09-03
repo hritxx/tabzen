@@ -270,7 +270,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   white-space: nowrap;
 }
 
-/* Triage Card */
+/* Triage List */
 .card-wrapper {
   display: flex;
   flex-direction: column;
@@ -281,101 +281,122 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   margin-bottom: 12px;
 }
 
-.triage-card {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  box-shadow: var(--shadow-md);
+.triage-list {
   display: flex;
   flex-direction: column;
-  gap: 11px;
-  animation: fadeIn 0.2s ease-out;
+  gap: 8px;
+}
+
+.triage-item {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.triage-item.expanded {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.triage-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.triage-row:hover {
+  background-color: var(--bg-subtle);
+}
+
+.triage-item.expanded .triage-row:hover {
+  background-color: transparent;
+}
+
+.triage-row-favicon {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.triage-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.triage-row-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.triage-row-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+.triage-row-pos {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.triage-item.expanded .triage-row-pos {
+  color: var(--brass);
+}
+
+.triage-detail {
+  border-top: 1px solid var(--border);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.triage-detail-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.triage-open-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+}
+
+.triage-open-btn:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-subtle);
 }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-.card-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-
-.card-domain-row {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 11.5px;
-  color: var(--text-secondary);
-  min-width: 0;
-}
-
-.favicon {
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  flex-shrink: 0;
-}
-
-.domain-text {
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 160px;
-}
-
-.card-badges {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.age-badge {
-  font-size: 10px;
-  font-weight: 600;
-  background-color: var(--bg-subtle);
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-  padding: 2px 7px;
-  border-radius: 20px;
-  white-space: nowrap;
-}
-
-.sleeping-badge {
-  background: var(--accent-soft);
-  border-color: transparent;
-  color: var(--text-secondary);
-  display: none;
-}
-
-.card-title {
-  font-size: 13.5px;
-  font-weight: 650;
-  letter-spacing: -0.005em;
-  color: var(--text-primary);
-  line-height: 1.4;
-  cursor: pointer;
-  word-break: break-word;
-  overflow-wrap: break-word;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.card-title:hover {
-  text-decoration: underline;
-  text-decoration-color: var(--border-strong);
-  text-underline-offset: 2px;
 }
 
 .card-read-time {

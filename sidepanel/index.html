@@ -46,10 +46,10 @@
     <section id="view-triage" class="view-panel active">
       <div class="view-header">
         <div>
-          <h2 class="section-title">Daily Reading Triage</h2>
-          <p class="section-desc">Clear stale tabs before they pile up</p>
+          <h2 class="section-title">Reading Triage</h2>
+          <p class="section-desc">Oldest first — tap a tab to review it</p>
         </div>
-        <span id="triage-progress" class="counter-text">0 of 0</span>
+        <span id="triage-progress" class="counter-text">0 tabs</span>
       </div>
 
       <div class="triage-filter-row">
@@ -64,40 +64,8 @@
       </div>
 
       <div id="triage-card-wrapper" class="card-wrapper">
-        <!-- Active Triage Card (Rendered via JS) -->
-        <div id="triage-card" class="triage-card">
-          <div class="card-meta">
-            <div class="card-domain-row">
-              <img id="card-favicon" class="favicon" src="../icons/icon-16.png" alt="icon">
-              <span id="card-hostname" class="domain-text">example.com</span>
-            </div>
-            <div class="card-badges">
-              <span id="card-sleeping-indicator" class="age-badge sleeping-badge">Sleeping</span>
-              <span id="card-age" class="age-badge">2 days ago</span>
-            </div>
-          </div>
-
-          <h3 id="card-title" class="card-title">Loading tab...</h3>
-          <div class="card-read-time" id="card-read-time">—</div>
-
-          <div class="card-summary-box">
-            <div class="summary-label">AI Takeaway</div>
-            <p id="card-takeaway" class="summary-text">Takeaways generate only when you ask — no background API calls.</p>
-            <button id="btn-triage-takeaway" class="secondary-btn btn-generate" type="button">Generate AI takeaway</button>
-          </div>
-
-          <div class="card-actions">
-            <button id="btn-triage-summarize" class="action-btn btn-summarize" title="Deep summary and close tab">
-              <span class="btn-text">Summarize & Close</span>
-            </button>
-            <button id="btn-triage-stash" class="action-btn btn-stash" title="Save link to vault and close tab">
-              <span class="btn-text">Stash</span>
-            </button>
-            <button id="btn-triage-keep" class="action-btn btn-keep" title="Leave open and move next">
-              <span class="btn-text">Keep</span>
-            </button>
-          </div>
-        </div>
+        <!-- Triage list (rendered via JS: one row per tab, tap to expand) -->
+        <div id="triage-list" class="triage-list"></div>
 
         <!-- Empty Triage State -->
         <div id="triage-empty" class="empty-state hidden">

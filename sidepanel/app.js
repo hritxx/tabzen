@@ -43,11 +43,10 @@ let organizeScope = "current"; // "current" | "all"
 let triageFilterStaleOnly = false; // false = All tabs (oldest first), true = older than stale threshold
 let triageAllWindows = false; // triage window scope, independent of the Groups scope
 let triageQueue = [];
-let currentTriageIndex = 0;
+let selectedTriageId = null;
 let cachedVaultItems = [];
 let vaultShowAll = false;
 const VAULT_RENDER_LIMIT = 200;
-let currentCardTabInfo = null;
 let currentTakeawayAbortController = null;
 
 // DOM Elements
@@ -60,21 +59,10 @@ const btnTriageAll = document.getElementById("btn-triage-all");
 const btnTriageStale = document.getElementById("btn-triage-stale");
 const btnTriageScopeWindow = document.getElementById("btn-triage-scope-window");
 const btnTriageScopeAll = document.getElementById("btn-triage-scope-all");
-const cardSleepingIndicator = document.getElementById("card-sleeping-indicator");
 const triageBadge = document.getElementById("triage-badge");
 const triageProgress = document.getElementById("triage-progress");
-const triageCard = document.getElementById("triage-card");
+const triageList = document.getElementById("triage-list");
 const triageEmpty = document.getElementById("triage-empty");
-const cardFavicon = document.getElementById("card-favicon");
-const cardHostname = document.getElementById("card-hostname");
-const cardAge = document.getElementById("card-age");
-const cardTitle = document.getElementById("card-title");
-const cardReadTime = document.getElementById("card-read-time");
-const cardTakeaway = document.getElementById("card-takeaway");
-const btnTriageTakeaway = document.getElementById("btn-triage-takeaway");
-const btnTriageSummarize = document.getElementById("btn-triage-summarize");
-const btnTriageStash = document.getElementById("btn-triage-stash");
-const btnTriageKeep = document.getElementById("btn-triage-keep");
 const btnRefreshTriage = document.getElementById("btn-refresh-triage");
 
 // Groups Elements
@@ -213,22 +201,12 @@ function setupEventListeners() {
     });
   }
 
-  // Triage Card Actions
-  if (btnTriageTakeaway) btnTriageTakeaway.addEventListener("click", loadCurrentTakeaway);
-  if (btnTriageSummarize) btnTriageSummarize.addEventListener("click", handleTriageSummarize);
-  if (btnTriageStash) btnTriageStash.addEventListener("click", handleTriageStash);
-  if (btnTriageKeep) btnTriageKeep.addEventListener("click", handleTriageKeep);
+  // Triage Card Actions are wired per-row in renderTriageList()
   if (btnRefreshTriage) btnRefreshTriage.addEventListener("click", async () => {
     // The empty-state button promises "all tabs": reset the stale filter
     // instead of reloading an empty stale queue (previous dead end).
     await setTriageFilter(false);
   });
-  if (cardTitle) cardTitle.addEventListener("click", () => {
-    if (currentCardTabInfo?.id) {
-      activateTab(currentCardTabInfo.id);
-    }
-  });
-
   // Scope Toggle Actions
   if (btnScopeCurrent) {
     btnScopeCurrent.addEventListener("click", () => {
@@ -403,10 +381,20 @@ async function refreshTabCounts() {
 async function loadTriageQueue() {
   const staleHours = Number(appSettings?.staleHours) || 24;
   triageQueue = await getTriageTabs(triageFilterStaleOnly, staleHours, triageAllWindows);
-  currentTriageIndex = 0;
-  if (triageBadge) triageBadge.textContent = String(triageQueue.length);
+  for (const item of triageQueue) {
+    if (item.takeawayState === undefined) item.takeawayState = "idle";
+  }
+  selectedTriageId = triageQueue.length > 0 ? triageQueue[0].id : null;
+  updateTriageCounts();
+  renderTriageList(false);
+}
 
-  await renderCurrentTriageCard();
+function updateTriageCounts() {
+  const remaining = triageQueue ? triageQueue.length : 0;
+  if (triageBadge) triageBadge.textContent = String(remaining);
+  if (triageProgress) {
+    triageProgress.textContent = remaining === 1 ? "1 tab" : `${remaining} tabs`;
+  }
 }
 
 async function setTriageFilter(staleOnly) {
@@ -428,186 +416,349 @@ function updateStalePillLabel() {
   btnTriageStale.textContent = label;
 }
 
-async function renderCurrentTriageCard() {
-  if (!triageQueue || triageQueue.length === 0 || currentTriageIndex >= triageQueue.length) {
-    triageCard.classList.add("hidden");
-    triageEmpty.classList.remove("hidden");
-    triageProgress.textContent = "0 of 0";
-    if (triageBadge) triageBadge.textContent = "0";
-    if (cardSleepingIndicator) cardSleepingIndicator.style.display = "none";
-    currentCardTabInfo = null;
-    return;
-  }
+function getSelectedTriageItem() {
+  if (!triageQueue || selectedTriageId === null) return null;
+  return triageQueue.find(t => t.id === selectedTriageId) || null;
+}
 
-  triageCard.classList.remove("hidden");
-  triageEmpty.classList.add("hidden");
-
-  const tab = triageQueue[currentTriageIndex];
-  currentCardTabInfo = tab;
-
-  triageProgress.textContent = `${currentTriageIndex + 1} of ${triageQueue.length}`;
-  if (triageBadge) triageBadge.textContent = String(triageQueue.length - currentTriageIndex);
-
-  cardTitle.textContent = tab.title || "Untitled Tab";
-  cardFavicon.src = tab.favIconUrl || "../icons/icon-16.png";
-  cardFavicon.onerror = () => { cardFavicon.src = "../icons/icon-16.png"; };
-
-  try {
-    const urlObj = new URL(tab.url);
-    cardHostname.textContent = urlObj.hostname.replace(/^www\./, "");
-  } catch {
-    cardHostname.textContent = tab.url;
-  }
-
-  cardAge.textContent = formatTimeAgo(tab.lastAccessed);
-  
-  // Show sleeping indicator if tab was discarded by auto-discard extension
-  if (cardSleepingIndicator) {
-    cardSleepingIndicator.style.display = tab.discarded ? "inline" : "none";
-  }
-
-  // Cancel any in-flight takeaway request from the previous card.
-  // No API call happens here: takeaways generate only when the user asks.
+function abortTakeawayRequest() {
   if (currentTakeawayAbortController) {
     currentTakeawayAbortController.abort();
     currentTakeawayAbortController = null;
   }
+}
 
-  cardReadTime.textContent = "";
-  cardTakeaway.textContent = "Takeaways generate only when you ask — no background API calls.";
-  btnTriageTakeaway?.classList.remove("hidden");
-  btnTriageTakeaway?.removeAttribute("disabled");
-  if (btnTriageTakeaway) btnTriageTakeaway.textContent = "Generate AI takeaway";
+function triageDomain(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url || "";
+  }
 }
 
 /**
- * On-demand takeaway for the current card. This is the ONLY path that calls
- * the takeaway API during triage — swiping through cards costs zero requests
- * (cache hits aside, which are free).
+ * Full triage list: one row per queued tab, tap to expand the selected row
+ * into its review detail (takeaway + actions). Re-rendered on every state
+ * change; queues are small enough that this stays cheap.
  */
-async function loadCurrentTakeaway() {
-  const tab = currentCardTabInfo;
-  if (!tab || currentTakeawayAbortController) return;
+function renderTriageList(scrollToSelected) {
+  abortTakeawayRequest();
+  triageList.innerHTML = "";
+
+  if (!triageQueue || triageQueue.length === 0) {
+    triageEmpty.classList.remove("hidden");
+    selectedTriageId = null;
+    updateTriageCounts();
+    return;
+  }
+  triageEmpty.classList.add("hidden");
+
+  // A null selection means the user collapsed all rows — keep it.
+  // A stale (removed) id falls back to the first row.
+  if (selectedTriageId !== null && !getSelectedTriageItem()) {
+    selectedTriageId = triageQueue[0].id;
+  }
+
+  triageQueue.forEach((item, index) => {
+    const expanded = item.id === selectedTriageId;
+
+    const container = document.createElement("div");
+    container.className = "triage-item" + (expanded ? " expanded" : "");
+    container.dataset.id = String(item.id);
+
+    const row = document.createElement("div");
+    row.className = "triage-row";
+
+    const fav = document.createElement("img");
+    fav.className = "triage-row-favicon";
+    fav.src = item.favIconUrl || "../icons/icon-16.png";
+    fav.alt = "";
+    fav.onerror = () => { fav.src = "../icons/icon-16.png"; };
+
+    const main = document.createElement("div");
+    main.className = "triage-row-main";
+
+    const title = document.createElement("div");
+    title.className = "triage-row-title";
+    title.textContent = item.title || "Untitled Tab";
+    title.title = item.url;
+
+    const meta = document.createElement("div");
+    meta.className = "triage-row-meta";
+    const tags = [triageDomain(item.url), formatTimeAgo(item.lastAccessed)];
+    if (item.discarded) tags.push("Sleeping");
+    if (item.takeawayState === "done") tags.push("Reviewed");
+    meta.textContent = tags.join(" · ");
+
+    main.appendChild(title);
+    main.appendChild(meta);
+
+    const pos = document.createElement("span");
+    pos.className = "triage-row-pos";
+    pos.textContent = String(index + 1);
+
+    row.appendChild(fav);
+    row.appendChild(main);
+    row.appendChild(pos);
+    row.addEventListener("click", () => {
+      selectedTriageId = expanded ? null : item.id;
+      renderTriageList(false);
+    });
+    container.appendChild(row);
+
+    if (expanded) {
+      container.appendChild(buildTriageDetail(item));
+    }
+
+    triageList.appendChild(container);
+  });
+
+  updateTriageCounts();
+
+  if (scrollToSelected && selectedTriageId !== null) {
+    triageList.querySelector(`[data-id="${selectedTriageId}"]`)?.scrollIntoView({ block: "nearest" });
+  }
+}
+
+function buildTriageDetail(item) {
+  const detail = document.createElement("div");
+  detail.className = "triage-detail";
+
+  const topRow = document.createElement("div");
+  topRow.className = "triage-detail-top";
+
+  const readTime = document.createElement("span");
+  readTime.className = "card-read-time";
+  readTime.textContent = item.readTime || "";
+
+  const openBtn = document.createElement("button");
+  openBtn.className = "triage-open-btn";
+  openBtn.textContent = "Open tab";
+  openBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    activateTab(item.id);
+  });
+
+  topRow.appendChild(readTime);
+  topRow.appendChild(openBtn);
+  detail.appendChild(topRow);
+
+  const box = document.createElement("div");
+  box.className = "card-summary-box";
+
+  const label = document.createElement("div");
+  label.className = "summary-label";
+  label.textContent = "AI Takeaway";
+  box.appendChild(label);
+
+  const text = document.createElement("p");
+  text.className = "summary-text";
+  if (item.takeawayState === "done") {
+    text.textContent = item.takeaway;
+  } else if (item.takeawayState === "loading") {
+    text.textContent = "Generating takeaway...";
+  } else if (item.takeawayState === "error") {
+    text.textContent = item.takeawayError || "Takeaway unavailable.";
+  } else {
+    text.textContent = "Takeaways generate only when you ask — no background API calls.";
+  }
+  box.appendChild(text);
+
+  if (item.takeawayState !== "done" && item.takeawayState !== "loading") {
+    const genBtn = document.createElement("button");
+    genBtn.className = "secondary-btn btn-generate";
+    genBtn.type = "button";
+    genBtn.textContent = "Generate AI takeaway";
+    genBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      loadSelectedTakeaway(item);
+    });
+    box.appendChild(genBtn);
+  }
+  detail.appendChild(box);
+
+  const actions = document.createElement("div");
+  actions.className = "card-actions";
+
+  const summarizeBtn = document.createElement("button");
+  summarizeBtn.className = "action-btn btn-summarize";
+  summarizeBtn.title = "Deep summary and close tab";
+  summarizeBtn.disabled = Boolean(item.actionBusy);
+  const summarizeLabel = document.createElement("span");
+  summarizeLabel.className = "btn-text";
+  summarizeLabel.textContent = item.actionBusy === "summarize" ? "Summarizing..." : "Summarize & Close";
+  summarizeBtn.appendChild(summarizeLabel);
+  summarizeBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    summarizeTriageItem(item);
+  });
+
+  const stashBtn = document.createElement("button");
+  stashBtn.className = "action-btn btn-stash";
+  stashBtn.title = "Save link to vault and close tab";
+  stashBtn.disabled = Boolean(item.actionBusy);
+  const stashLabel = document.createElement("span");
+  stashLabel.className = "btn-text";
+  stashLabel.textContent = "Stash";
+  stashBtn.appendChild(stashLabel);
+  stashBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    stashTriageItem(item);
+  });
+
+  const keepBtn = document.createElement("button");
+  keepBtn.className = "action-btn btn-keep";
+  keepBtn.title = "Collapse and move to next tab";
+  const keepLabel = document.createElement("span");
+  keepLabel.className = "btn-text";
+  keepLabel.textContent = "Keep";
+  keepBtn.appendChild(keepLabel);
+  keepBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    keepTriageItem(item);
+  });
+
+  actions.appendChild(summarizeBtn);
+  actions.appendChild(stashBtn);
+  actions.appendChild(keepBtn);
+  detail.appendChild(actions);
+
+  return detail;
+}
+
+/**
+ * On-demand takeaway for the expanded row. The ONLY path that calls the
+ * takeaway API during triage — browsing the list costs zero requests.
+ */
+async function loadSelectedTakeaway(item) {
+  if (!item || item.takeawayState === "loading" || item.takeawayState === "done") return;
+  item.takeawayState = "loading";
+  item.takeawayError = "";
+  renderTriageList(false);
 
   const controller = new AbortController();
   currentTakeawayAbortController = controller;
-  btnTriageTakeaway?.classList.add("hidden");
-  cardReadTime.textContent = "Estimating...";
-  cardTakeaway.textContent = "Generating takeaway...";
 
   try {
     let content = { description: "", snippet: "" };
-    if (!tab.discarded) {
-      content = await getPageSnippet(tab.id);
+    if (!item.discarded) {
+      content = await getPageSnippet(item.id);
     }
 
     if (controller.signal.aborted) return;
 
     const tabData = {
-      id: tab.id,
-      title: tab.title,
-      url: tab.url,
-      favIconUrl: tab.favIconUrl,
+      id: item.id,
+      title: item.title,
+      url: item.url,
+      favIconUrl: item.favIconUrl,
       description: content.description,
       snippet: content.snippet,
-      discarded: tab.discarded
+      discarded: item.discarded
     };
 
-    currentCardTabInfo = tabData;
-
     const result = await getTabTakeaway(appSettings.geminiApiKey, tabData, appSettings.model, controller.signal);
-    if (!controller.signal.aborted) {
-      cardTakeaway.textContent = result.takeaway;
-      cardReadTime.textContent = `${result.readTime}`;
-      currentCardTabInfo.takeaway = result.takeaway;
-      currentCardTabInfo.readTime = result.readTime;
-    }
+    if (controller.signal.aborted) return;
+    item.description = content.description;
+    item.snippet = content.snippet;
+    item.takeaway = result.takeaway;
+    item.readTime = result.readTime;
+    item.takeawayState = "done";
   } catch (err) {
     if (err.name !== "AbortError") {
       console.warn("Triage analysis error:", err);
-      if (err.message.includes("rate limit") || err.message.includes("429")) {
-        cardTakeaway.textContent = "Gemini quota cooldown. Try again shortly.";
-      } else {
-        cardTakeaway.textContent = `Summary unavailable: ${tab.title}`;
-      }
-      cardReadTime.textContent = "";
-      btnTriageTakeaway?.classList.remove("hidden");
+      item.takeawayState = "error";
+      item.takeawayError = (err.message.includes("rate limit") || err.message.includes("429"))
+        ? "Gemini quota cooldown. Try again shortly."
+        : "Takeaway unavailable.";
     }
   } finally {
     if (currentTakeawayAbortController === controller) {
       currentTakeawayAbortController = null;
     }
+    renderTriageList(false);
   }
 }
 
-async function handleTriageSummarize() {
-  if (!currentCardTabInfo) return;
-  const originalHtml = btnTriageSummarize.innerHTML;
-  btnTriageSummarize.innerHTML = `<span class="btn-text">Summarizing...</span>`;
-  btnTriageSummarize.disabled = true;
+function removeTriageItem(id, scroll) {
+  const idx = triageQueue.findIndex(t => t.id === id);
+  if (idx !== -1) triageQueue.splice(idx, 1);
+  const next = triageQueue[Math.min(idx, triageQueue.length - 1)] || null;
+  selectedTriageId = next ? next.id : null;
+  renderTriageList(scroll);
+}
+
+async function summarizeTriageItem(item) {
+  if (!item || item.actionBusy) return;
+  item.actionBusy = "summarize";
+  renderTriageList(false);
 
   try {
-    // If the user clicked before the takeaway pass captured page content,
-    // fetch a fresh snippet so the deep summary isn't running on empty input.
-    if (!currentCardTabInfo.snippet && !currentCardTabInfo.discarded && currentCardTabInfo.id) {
+    // Fetch a fresh snippet if none was captured yet, so the deep summary
+    // isn't running on empty input.
+    if (!item.snippet && !item.discarded && item.id) {
       try {
-        const fresh = await getPageSnippet(currentCardTabInfo.id);
-        currentCardTabInfo.description = currentCardTabInfo.description || fresh.description;
-        currentCardTabInfo.snippet = fresh.snippet;
+        const fresh = await getPageSnippet(item.id);
+        item.description = item.description || fresh.description;
+        item.snippet = fresh.snippet;
       } catch (err) {
         console.warn("Fresh snippet fetch failed:", err);
       }
     }
-    const deepResult = await getDeepSummary(appSettings.geminiApiKey, currentCardTabInfo, appSettings.model);
+    const deepResult = await getDeepSummary(appSettings.geminiApiKey, item, appSettings.model);
     await addToVault({
-      url: currentCardTabInfo.url,
-      title: currentCardTabInfo.title,
-      favIconUrl: currentCardTabInfo.favIconUrl,
+      url: item.url,
+      title: item.title,
+      favIconUrl: item.favIconUrl,
       takeaway: deepResult.takeaway,
       bullets: deepResult.bullets,
       readTime: deepResult.readTime
     });
 
-    await closeTab(currentCardTabInfo.id);
+    await closeTab(item.id);
     showToast("Summarized and saved to Vault.");
-    currentTriageIndex++;
-    await renderCurrentTriageCard();
+    removeTriageItem(item.id, true);
     await refreshTabCounts();
     await loadVault();
   } catch (err) {
     showToast("Error: " + err.message);
-  } finally {
-    btnTriageSummarize.innerHTML = originalHtml;
-    btnTriageSummarize.disabled = false;
+    item.actionBusy = null;
+    renderTriageList(false);
   }
 }
 
-async function handleTriageStash() {
-  if (!currentCardTabInfo) return;
+async function stashTriageItem(item) {
+  if (!item || item.actionBusy) return;
+  item.actionBusy = "stash";
+  renderTriageList(false);
   try {
     await addToVault({
-      url: currentCardTabInfo.url,
-      title: currentCardTabInfo.title,
-      favIconUrl: currentCardTabInfo.favIconUrl,
-      takeaway: currentCardTabInfo.takeaway || "Stashed tab.",
+      url: item.url,
+      title: item.title,
+      favIconUrl: item.favIconUrl,
+      takeaway: item.takeaway || "Stashed tab.",
       bullets: [],
-      readTime: currentCardTabInfo.readTime || "3 min"
+      readTime: item.readTime || "3 min"
     });
 
-    await closeTab(currentCardTabInfo.id);
+    await closeTab(item.id);
     showToast("Stashed to Vault.");
-    currentTriageIndex++;
-    await renderCurrentTriageCard();
+    removeTriageItem(item.id, true);
     await refreshTabCounts();
     await loadVault();
   } catch (err) {
     showToast("Error: " + err.message);
+    item.actionBusy = null;
+    renderTriageList(false);
   }
 }
 
-function handleTriageKeep() {
-  currentTriageIndex++;
-  renderCurrentTriageCard();
+function keepTriageItem(item) {
+  if (!item) return;
+  const idx = triageQueue.findIndex(t => t.id === item.id);
+  const next = triageQueue[idx + 1] || triageQueue[0] || null;
+  selectedTriageId = next ? next.id : null;
+  renderTriageList(true);
 }
 
 /**

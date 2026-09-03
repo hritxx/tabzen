@@ -31,7 +31,7 @@ import {
 // State
 let appSettings = {
   geminiApiKey: "",
-  model: "gemini-2.5-pro",
+  model: "gemini-3.1-pro",
   staleHours: 24,
   autoPromptThreshold: 15
 };
@@ -82,6 +82,8 @@ const inputApiKey = document.getElementById("input-api-key");
 const btnToggleKeyVisibility = document.getElementById("btn-toggle-key-visibility");
 const selectStaleHours = document.getElementById("select-stale-hours");
 const selectModel = document.getElementById("select-model");
+const customModelContainer = document.getElementById("custom-model-container");
+const inputCustomModel = document.getElementById("input-custom-model");
 const btnSaveSettings = document.getElementById("btn-save-settings");
 
 // Toast
@@ -194,6 +196,16 @@ function setupEventListeners() {
       } else {
         inputApiKey.type = "password";
         btnToggleKeyVisibility.textContent = "Show";
+      }
+    });
+  }
+  if (selectModel) {
+    selectModel.addEventListener("change", () => {
+      if (selectModel.value === "custom") {
+        customModelContainer?.classList.remove("hidden");
+        inputCustomModel?.focus();
+      } else {
+        customModelContainer?.classList.add("hidden");
       }
     });
   }
@@ -623,7 +635,17 @@ async function openSettingsModal() {
   }
   inputApiKey.value = appSettings.geminiApiKey || "";
   selectStaleHours.value = String(appSettings.staleHours || 24);
-  selectModel.value = appSettings.model || "gemini-2.5-pro";
+  
+  const currentModel = appSettings.model || "gemini-3.1-pro";
+  const knownOptions = Array.from(selectModel.options).map(o => o.value);
+  if (knownOptions.includes(currentModel) && currentModel !== "custom") {
+    selectModel.value = currentModel;
+    customModelContainer?.classList.add("hidden");
+  } else {
+    selectModel.value = "custom";
+    if (inputCustomModel) inputCustomModel.value = currentModel;
+    customModelContainer?.classList.remove("hidden");
+  }
   settingsModal.classList.remove("hidden");
 }
 
@@ -632,13 +654,18 @@ function closeSettingsModal() {
 }
 
 async function handleSaveSettings() {
+  let chosenModel = selectModel.value;
+  if (chosenModel === "custom") {
+    chosenModel = inputCustomModel?.value?.trim() || "gemini-3.1-pro";
+  }
+
   const updated = await saveSettings({
     geminiApiKey: inputApiKey.value.trim(),
     staleHours: Number(selectStaleHours.value),
-    model: selectModel.value
+    model: chosenModel
   });
   appSettings = updated;
   closeSettingsModal();
-  showToast("Settings saved successfully!");
+  showToast(`Settings saved! Active model: ${chosenModel}`);
   await loadTriageQueue();
 }

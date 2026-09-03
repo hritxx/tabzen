@@ -11,7 +11,9 @@ import {
 } from "../lib/vault.js";
 
 import {
+  getCurrentWindowId,
   getManageableTabs,
+  getAllManageableTabs,
   getStaleTabs,
   getActiveTabGroups,
   applyTabGroups,
@@ -31,10 +33,11 @@ import {
 // State
 let appSettings = {
   geminiApiKey: "",
-  model: "gemini-3.1-pro",
+  model: "gemini-3.6-flash",
   staleHours: 24,
   autoPromptThreshold: 15
 };
+let organizeScope = "current"; // "current" | "all"
 let triageQueue = [];
 let currentTriageIndex = 0;
 let cachedVaultItems = [];
@@ -62,7 +65,11 @@ const btnTriageKeep = document.getElementById("btn-triage-keep");
 const btnRefreshTriage = document.getElementById("btn-refresh-triage");
 
 // Groups Elements
+const btnScopeCurrent = document.getElementById("btn-scope-current");
+const btnScopeAll = document.getElementById("btn-scope-all");
 const btnAutoCluster = document.getElementById("btn-auto-cluster");
+const clusterBtnLabel = document.getElementById("cluster-btn-label");
+const btnConsolidateWindows = document.getElementById("btn-consolidate-windows");
 const groupsList = document.getElementById("groups-list");
 const ungroupedList = document.getElementById("ungrouped-list");
 
@@ -89,7 +96,7 @@ const btnSaveSettings = document.getElementById("btn-save-settings");
 // Toast
 const toast = document.getElementById("toast");
 
-function showToast(message, durationMs = 2600) {
+function showToast(message, durationMs = 2800) {
   if (!toast) return;
   toast.textContent = message;
   toast.classList.remove("hidden");
@@ -168,8 +175,30 @@ function setupEventListeners() {
     }
   });
 
+  // Scope Toggle Actions
+  if (btnScopeCurrent) {
+    btnScopeCurrent.addEventListener("click", () => {
+      organizeScope = "current";
+      btnScopeCurrent.classList.add("active");
+      btnScopeAll?.classList.remove("active");
+      if (clusterBtnLabel) clusterBtnLabel.textContent = "Organize Current Window with AI";
+      btnConsolidateWindows?.classList.add("hidden");
+    });
+  }
+
+  if (btnScopeAll) {
+    btnScopeAll.addEventListener("click", () => {
+      organizeScope = "all";
+      btnScopeAll.classList.add("active");
+      btnScopeCurrent?.classList.remove("active");
+      if (clusterBtnLabel) clusterBtnLabel.textContent = "Organize All Windows (In-Place)";
+      btnConsolidateWindows?.classList.remove("hidden");
+    });
+  }
+
   // Groups Actions
   if (btnAutoCluster) btnAutoCluster.addEventListener("click", handleAutoCluster);
+  if (btnConsolidateWindows) btnConsolidateWindows.addEventListener("click", handleConsolidateWindows);
 
   // Vault Actions
   if (vaultSearchInput) {
@@ -249,9 +278,16 @@ function switchView(viewName) {
 }
 
 async function refreshTabCounts() {
-  const tabs = await getManageableTabs();
+  const currentTabs = await getManageableTabs();
+  const allTabs = await getAllManageableTabs();
   if (headerTabCount) {
-    headerTabCount.textContent = `${tabs.length} tabs`;
+    if (allTabs.length > currentTabs.length) {
+      headerTabCount.textContent = `${currentTabs.length} tabs (${allTabs.length} total)`;
+      headerTabCount.title = `${currentTabs.length} tabs in this window, ${allTabs.length} across all windows`;
+    } else {
+      headerTabCount.textContent = `${currentTabs.length} tabs`;
+      headerTabCount.title = "Total open tabs";
+    }
   }
 }
 
@@ -321,7 +357,7 @@ async function renderCurrentTriageCard() {
 async function handleTriageSummarize() {
   if (!currentCardTabInfo) return;
   const originalHtml = btnTriageSummarize.innerHTML;
-  btnTriageSummarize.innerHTML = `<span class="btn-icon">⏳</span><span class="btn-text">Summarizing with Pro...</span>`;
+  btnTriageSummarize.innerHTML = `<span class="btn-icon">⏳</span><span class="btn-text">Summarizing...</span>`;
   btnTriageSummarize.disabled = true;
 
   try {
@@ -379,26 +415,56 @@ function handleTriageKeep() {
 
 async function handleAutoCluster() {
   const originalHtml = btnAutoCluster.innerHTML;
-  btnAutoCluster.innerHTML = `<span class="btn-icon">⏳</span><span>Clustering tabs with AI...</span>`;
+  btnAutoCluster.innerHTML = `<span class="btn-icon">⏳</span><span>Clustering tabs with ${appSettings.model}...</span>`;
   btnAutoCluster.disabled = true;
 
   try {
-    const tabs = await getManageableTabs();
+    const tabs = organizeScope === "all" ? await getAllManageableTabs() : await getManageableTabs();
     if (tabs.length === 0) {
       showToast("No active tabs to organize.");
       return;
     }
 
     const groupSpecs = await clusterTabsWithAI(appSettings.geminiApiKey, tabs, appSettings.model);
-    const applied = await applyTabGroups(groupSpecs);
+    const applied = await applyTabGroups(groupSpecs, null);
 
-    showToast(`🪄 Created ${applied.length} colored tab groups!`);
+    const scopeText = organizeScope === "all" ? "across all windows" : "in current window";
+    showToast(`🪄 Organized ${tabs.length} tabs into ${applied.length} colored groups ${scopeText}!`);
     await refreshGroupsView();
+    await refreshTabCounts();
   } catch (err) {
     showToast("Clustering error: " + err.message);
   } finally {
     btnAutoCluster.innerHTML = originalHtml;
     btnAutoCluster.disabled = false;
+  }
+}
+
+async function handleConsolidateWindows() {
+  if (!btnConsolidateWindows) return;
+  const originalHtml = btnConsolidateWindows.innerHTML;
+  btnConsolidateWindows.innerHTML = `<span>⏳ Consolidating & grouping with ${appSettings.model}...</span>`;
+  btnConsolidateWindows.disabled = true;
+
+  try {
+    const allTabs = await getAllManageableTabs();
+    if (allTabs.length === 0) {
+      showToast("No active tabs found.");
+      return;
+    }
+
+    const currentWindowId = await getCurrentWindowId();
+    const groupSpecs = await clusterTabsWithAI(appSettings.geminiApiKey, allTabs, appSettings.model);
+    const applied = await applyTabGroups(groupSpecs, currentWindowId);
+
+    showToast(`🪟 Consolidated ${allTabs.length} tabs into ${applied.length} groups in this window!`);
+    await refreshGroupsView();
+    await refreshTabCounts();
+  } catch (err) {
+    showToast("Consolidation error: " + err.message);
+  } finally {
+    btnConsolidateWindows.innerHTML = originalHtml;
+    btnConsolidateWindows.disabled = false;
   }
 }
 
@@ -494,7 +560,7 @@ async function refreshGroupsView() {
   if (ungroupedTabs.length === 0) {
     const emptyP = document.createElement("p");
     emptyP.style.cssText = "font-size:12px; color:var(--text-secondary);";
-    emptyP.textContent = "All tabs are grouped.";
+    emptyP.textContent = "All tabs in this window are grouped.";
     ungroupedList.appendChild(emptyP);
   } else {
     for (const t of ungroupedTabs) {
@@ -636,7 +702,7 @@ async function openSettingsModal() {
   inputApiKey.value = appSettings.geminiApiKey || "";
   selectStaleHours.value = String(appSettings.staleHours || 24);
   
-  const currentModel = appSettings.model || "gemini-3.1-pro";
+  const currentModel = appSettings.model || "gemini-3.6-flash";
   const knownOptions = Array.from(selectModel.options).map(o => o.value);
   if (knownOptions.includes(currentModel) && currentModel !== "custom") {
     selectModel.value = currentModel;
@@ -656,7 +722,7 @@ function closeSettingsModal() {
 async function handleSaveSettings() {
   let chosenModel = selectModel.value;
   if (chosenModel === "custom") {
-    chosenModel = inputCustomModel?.value?.trim() || "gemini-3.1-pro";
+    chosenModel = inputCustomModel?.value?.trim() || "gemini-3.6-flash";
   }
 
   const updated = await saveSettings({

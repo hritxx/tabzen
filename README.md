@@ -1,114 +1,135 @@
-# TabZen - AI Tab Manager & Reading Coach for Brave Browser
+# TabZen - AI Tab Manager & Reading Coach for Chrome & Brave
 
-> An AI-powered Brave Side Panel companion to end tab-hoarding, tame your reading backlog, and organize tabs into native color-coded groups.
+> An AI-powered Side Panel companion that tames tab debt, conquers reading backlogs, handles sleeping tabs with zero RAM wake-up, and organizes tabs into native color-coded groups using Google Gemini.
 
-![Platform](https://img.shields.io/badge/Platform-Brave%20%7C%20Chromium-orange)
-![Manifest](https://img.shields.io/badge/Manifest-V3-blue)
-![AI](https://img.shields.io/badge/AI-Google%20Gemini%202.5%20Flash-indigo)
-![Build](https://img.shields.io/badge/Build-Zero%20Dependencies%20(Pure%20ESM)-success)
-
----
-
-## 💡 The Problem TabZen Solves
-
-1. **Tab Debt**: Leaving 40+ tabs open because "I will read this later".
-2. **Cognitive Overload**: Inability to quickly locate active project tabs amidst news, articles, and documentation.
-3. **Fear Of Missing Out (FOMO)**: Hesitation to close tabs for fear of losing valuable articles or references forever.
-
-TabZen lives in **Brave's Side Panel** right alongside your browsing session, providing:
-- 🎯 **Daily Reading Triage ("Tinder for Tabs")**: Walks you through stale tabs (>24h untouched) one by one with a fast AI takeaway and estimated read time.
-  - `⚡ Summarize & Close`: Generates 3 executive takeaways, archives them to your local Vault, and closes the tab.
-  - `📦 Stash Vault`: Saves link + takeaway to your offline Vault and closes the tab immediately.
-  - `⏳ Keep Open`: Leaves tab open and advances to next card.
-- 🪄 **1-Click AI Auto-Clustering**: Uses Gemini 2.5 Flash to categorize all open tabs into native Brave color-coded Tab Groups (e.g., *Dev & Frameworks*, *AI Research*, *News & Blogs*).
-- 📦 **Zero-FOMO Searchable Vault**: Local database of all closed reading material with instant keyword search, 1-click **Restore Tab**, and **Export to Markdown** for Obsidian and Notion.
+[![Browser](https://img.shields.io/badge/Browsers-Google%20Chrome%20%7C%20Brave-blue)](https://github.com/hritxx/tabzen)
+[![Manifest](https://img.shields.io/badge/Manifest-V3-success)](https://github.com/hritxx/tabzen)
+[![AI Engine](https://img.shields.io/badge/AI-Google%20Gemini%203.6%20Flash%20%26%20Pro-purple)](https://aistudio.google.com/)
+[![Build](https://img.shields.io/badge/Build-Pure%20ESM%20(Zero%20Dependencies)-orange)](https://github.com/hritxx/tabzen)
 
 ---
 
-## 🚀 Quick Start: Install in Brave (Under 60 Seconds)
+## ⚡ Superpowers
 
-### 1. Load the Extension into Brave
-1. Open **Brave Browser** and navigate to:
+- 🎯 **Daily Reading Triage ("Tinder for Tabs")**: Swipe through open tabs one by one with a fast 2-sentence AI takeaway and estimated read time.
+  - **`⚡ Summarize & Close`**: AI extracts 3 bullet points, saves them to your local Vault, and closes the tab.
+  - **`📦 Stash Vault`**: Saves link + takeaway to your offline Vault and closes the tab immediately.
+  - **`⏳ Keep Open`**: Leaves tab open and advances to the next card.
+  - **Filter Pill**: Toggle between `All Tabs` (sorted oldest/most neglected first) and `Stale (>24h)`.
+- 💤 **Sleeping Tab Preservation (Zero RAM Re-activation)**:
+  - Smartly detects tabs suspended by extensions like *Auto Tab Discard*, *The Great Suspender*, *Tab Suspender*, or native Brave/Chrome tab discard.
+  - Unpacks the original URLs and titles, generates takeaways, and organizes them **without waking up or reloading sleeping tabs into memory**.
+- 🪄 **Semantic Color Grouping & Regrouping**:
+  - Clusters 100% of open tabs into native, color-coded Chrome & Brave Tab Groups.
+  - Dissolves obsolete groups automatically upon re-clustering for clean reorganizations.
+- 🪟 **Multi-Window Support & Desktop Consolidation**:
+  - **`Current Window`**: Strictly groups tabs in the active window without touching other windows.
+  - **`All Open Windows`**: Organizes tabs in-place across all desktop windows.
+  - **`🪟 Pull & Group All Windows Into This Window`**: Pulls tabs scattered across multiple desktop windows into a unified window.
+- 📦 **Searchable Markdown Vault**:
+  - Search across all previously closed articles and summaries in real time.
+  - 1-click **`📋 Copy Markdown`** or **`📥 Download MD`** for Obsidian, Notion, and Logseq.
+- 🛡️ **Anti-Spam & Zero-Rate-Limit Defense**:
+  - Built-in LRU summary cache (0 API calls for repeated tabs).
+  - 1.2-second request serializer queue to stay well within Google AI Studio quota.
+  - 250ms debounce and active request cancellation (`AbortController`) when navigating cards quickly.
+  - Exponential backoff and auto-retry on HTTP 429.
+- 🌟 **Gemini Series 3 & Live Model Discovery**:
+  - Native support for **`gemini-3.6-flash`**, **`gemini-3.1-pro`**, **`gemini-3.8-flash`**, or custom model IDs.
+  - Self-healing 404 auto-fallback: never crashes if a model ID is unavailable.
+  - **`🔄 Load Available Models`** button in settings queries your API key directly for supported models.
+
+---
+
+## 🚀 Quick Start (Under 60 Seconds)
+
+### 1. Clone the Repository
+```bash
+git clone git@github.com:hritxx/tabzen.git
+# or https://github.com/hritxx/tabzen.git
+cd tabzen
+```
+
+### 2. Load the Extension into Google Chrome or Brave
+
+#### In Google Chrome:
+1. Open Chrome and navigate to:
    ```text
-   brave://extensions
+   chrome://extensions
    ```
 2. Toggle on **Developer mode** in the top-right corner.
 3. Click the **Load unpacked** button in the top-left.
-4. Select this directory:
+4. Select the `tabzen` directory.
+
+#### In Brave Browser:
+1. Open Brave and navigate to:
    ```text
-   /Users/hriteekroy1869/projects/brave-tab-copilot
+   brave://extensions
    ```
-5. You will see **TabZen - AI Tab Manager & Reading Coach** appear with its custom icon!
+2. Toggle on **Developer mode** (top-right).
+3. Click **Load unpacked** (top-left) and select the `tabzen` directory.
 
-### 2. Open the Side Panel
-- Click the **TabZen icon** in your Brave extension toolbar (pin it for quick access).
-- Or click the **Brave Sidebar** icon and select **TabZen**.
-
-### 3. Add Your Free Gemini API Key
-1. Click the `⚙️` (Settings) icon in the top right of TabZen.
-2. Get a free API key with one click from [Google AI Studio](https://aistudio.google.com/app/apikey).
-3. Paste the key into TabZen and click **Save Settings**.
-*(Note: Even without an API key, TabZen includes heuristic domain clustering so you can test it immediately!)*
+### 3. Open the Side Panel & Add Your Gemini API Key
+1. Click the **TabZen** extension icon in your browser toolbar (pin it for convenience).
+2. The TabZen Side Panel will open alongside your web pages.
+3. Click the **⚙️ Settings** icon in the header.
+4. Paste your free Google Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+5. Click **Save Settings**!
+*(Note: TabZen includes intelligent offline heuristic grouping so you can test grouping even before adding an API key!)*
 
 ---
 
-## 🛠️ Feature Walkthrough
+## 🛠️ Usage Guide
 
-### 1. 🎯 Triage Deck
-- TabZen automatically filters tabs that haven't been focused or visited in >24 hours (configurable to 12h, 48h, or 7 days).
-- For each card, Gemini produces:
-  - **Estimated read time** (e.g. `⏱️ 4 min read`)
-  - **AI Takeaway** highlighting the key thesis of the article
-- 1-click decisions:
-  - **⚡ Summarize & Close**: AI extracts 3 bullet points, saves to your vault, and closes the tab.
-  - **📦 Stash Vault**: Closes tab and archives URL.
-  - **⏳ Keep Open**: Skips to the next card.
+### 1. Triage Deck
+1. Switch to the **🎯 Triage** tab.
+2. Select **All Tabs** (default) or **Stale (>24h)**.
+3. Review the AI-generated takeaway and estimated reading time.
+4. Click **⚡ Summarize & Close** to capture key insights into your Vault and free up memory, or **⏳ Keep Open** to move to the next tab.
 
-### 2. 📑 Active Groups & Auto-Clustering
-- Click **🪄 Auto-Cluster Tabs with AI**.
-- TabZen analyzes all open tabs in your window, clusters them by topic, and assigns them native Brave colored group headers.
-- Expand, collapse, or close entire groups with one click.
+### 2. Tab Groups & Clustering
+1. Switch to the **📑 Groups** tab.
+2. Choose your scope:
+   - **Current Window**: Organizes tabs in the current window.
+   - **All Open Windows**: Organizes tabs across all desktop windows.
+3. Click **🪄 Organize with AI**.
+4. To consolidate tabs from 3 or 4 windows into a single window, click **🪟 Pull & Group All Windows Into This Window**.
 
-### 3. 📦 Stash Vault & Markdown Export
-- Search across all previously closed articles, summaries, and URLs in real time.
-- Click any title or `Open Tab` to reopen it anytime.
-- Click `📋 Copy Markdown` or `📥 Download MD` to generate structured notes:
-  ```markdown
-  ### [PostgreSQL Indexing: The Definitive Guide](https://...)
-  *Saved on 9/4/2026 • Read time: 6 min*
-
-  > **TL;DR:** Comparison of B-Tree vs BRIN indexes for large time-series logs.
-
-  **Key Highlights:**
-  - Partial indexes save space by omitting NULL rows.
-  - Multi-column index column order matters for range queries.
-  ```
+### 3. Reading Vault
+1. Switch to the **📦 Vault** tab.
+2. Type in the search box to filter by title, URL, takeaway, or bullet points.
+3. Click **📋 Copy Markdown** or **📥 Download MD** to import your reading notes into Obsidian, Notion, or Roam.
 
 ---
 
 ## 🏗️ Architecture & Privacy
 
-- **Zero Build Step**: Native Manifest V3 using modern ES modules. No `npm install`, no `webpack`, no bundle bloat.
-- **Privacy-First**: No analytics or telemetry. All tab history and stashed articles remain locally on your machine in `chrome.storage.local`.
-- **API Efficiency**: Uses `gemini-2.5-flash` for sub-second responses and batches tabs to consume negligible tokens.
+- **Zero Build Step**: Built exclusively with Vanilla ES Modules (ESM). No `npm install`, no build tools, no bloated `node_modules` — instant reload and low memory footprint (<150KB).
+- **Privacy First**: 100% client-side. Tab history, notes, and vault items are saved only to your local browser storage (`chrome.storage.local`). No tracking or analytics.
+- **Quota Protective**: In-memory LRU cache, request serialization, and `AbortController` request cancellation prevent API spamming and rate limits.
 
 ---
 
-## 📂 Project Structure
+## 📂 Repository Structure
+
 ```
-projects/brave-tab-copilot/
-├── manifest.json                  # Chromium MV3 manifest
-├── README.md                      # Documentation & user guide
+tabzen/
+├── manifest.json            # Chromium Manifest V3 configuration
 ├── background/
-│   └── service-worker.js          # Tab access tracking & side panel trigger
+│   └── service-worker.js    # Side panel behavior & tab activity tracking
 ├── sidepanel/
-│   ├── index.html                 # Semantic UI structure
-│   ├── style.css                  # Apple/Brave light & dark responsive design
-│   └── app.js                     # State machine & user event handlers
+│   ├── index.html           # Side Panel markup (Triage, Groups, Vault, Settings)
+│   ├── style.css            # Responsive Apple/Brave inspired styling
+│   └── app.js               # Side Panel UI controller & event orchestrator
 ├── lib/
-│   ├── gemini.js                  # Direct Gemini 2.5 Flash API client
-│   ├── tab-manager.js             # Brave Tab and TabGroups API wrapper
-│   └── vault.js                   # Local storage, search, & markdown generator
-├── icons/                         # 16x16, 48x48, 128x128 extension icons
-└── docs/                          # Superpowers specs and implementation plans
+│   ├── gemini.js            # Gemini API client, rate limiter, cache & clustering
+│   ├── tab-manager.js       # Chromium Tab & TabGroup API, suspender unpacker
+│   └── vault.js             # Local vault storage, search, & markdown generator
+└── icons/                   # 16px, 48px, 128px extension icons
 ```
+
+---
+
+## 📄 License
+
+MIT License. Crafted with precision for high-efficiency tab management.

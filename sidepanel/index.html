@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TabZen</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="brand">
+      <img src="../icons/icon-48.png" alt="Logo" class="logo-icon">
+      <div class="brand-text">
+        <span class="brand-title">TabZen</span>
+        <span class="brand-subtitle">AI Tab Copilot</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span id="header-tab-count" class="tab-badge" title="Total open tabs">0 tabs</span>
+      <button id="btn-open-settings" class="icon-btn" title="Settings">⚙️</button>
+    </div>
+  </header>
+
+  <!-- Navigation Bar -->
+  <nav class="nav-bar">
+    <button class="nav-btn active" data-view="triage">
+      <span>🎯 Triage</span>
+      <span id="triage-badge" class="nav-badge">0</span>
+    </button>
+    <button class="nav-btn" data-view="groups">
+      <span>📑 Groups</span>
+    </button>
+    <button class="nav-btn" data-view="vault">
+      <span>📦 Vault</span>
+      <span id="vault-badge" class="nav-badge">0</span>
+    </button>
+  </nav>
+
+  <!-- Main Views Container -->
+  <main class="main-content">
+    
+    <!-- VIEW 1: TRIAGE DECK -->
+    <section id="view-triage" class="view-panel active">
+      <div class="view-header">
+        <div>
+          <h2 class="section-title">Daily Reading Triage</h2>
+          <p class="section-desc">Clear stale tabs before they pile up</p>
+        </div>
+        <span id="triage-progress" class="counter-text">0 of 0</span>
+      </div>
+
+      <div id="triage-card-wrapper" class="card-wrapper">
+        <!-- Active Triage Card (Rendered via JS) -->
+        <div id="triage-card" class="triage-card">
+          <div class="card-meta">
+            <div class="card-domain-row">
+              <img id="card-favicon" class="favicon" src="../icons/icon-16.png" alt="icon">
+              <span id="card-hostname" class="domain-text">example.com</span>
+            </div>
+            <span id="card-age" class="age-badge">2 days ago</span>
+          </div>
+
+          <h3 id="card-title" class="card-title">Loading tab...</h3>
+          <div class="card-read-time" id="card-read-time">⏱️ 4 min read</div>
+
+          <div class="card-summary-box">
+            <div class="summary-label">💡 AI Takeaway</div>
+            <p id="card-takeaway" class="summary-text">Analyzing page content with Gemini Flash...</p>
+          </div>
+
+          <div class="card-actions">
+            <button id="btn-triage-summarize" class="action-btn btn-summarize" title="Deep summary & close tab">
+              <span class="btn-icon">⚡</span>
+              <span class="btn-text">Summarize & Close</span>
+            </button>
+            <button id="btn-triage-stash" class="action-btn btn-stash" title="Save link to vault & close tab">
+              <span class="btn-icon">📦</span>
+              <span class="btn-text">Stash Vault</span>
+            </button>
+            <button id="btn-triage-keep" class="action-btn btn-keep" title="Leave open and move next">
+              <span class="btn-icon">⏳</span>
+              <span class="btn-text">Keep Open</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Empty Triage State -->
+        <div id="triage-empty" class="empty-state hidden">
+          <div class="empty-icon">🎉</div>
+          <h3>Inbox Zero!</h3>
+          <p>No stale tabs pending. Your reading backlog is fully cleared.</p>
+          <button id="btn-refresh-triage" class="primary-btn">Check All Tabs</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: ACTIVE GROUPS -->
+    <section id="view-groups" class="view-panel">
+      <div class="view-header">
+        <div>
+          <h2 class="section-title">Tab Groups</h2>
+          <p class="section-desc">Organize windows into semantic color groups</p>
+        </div>
+      </div>
+
+      <div class="cluster-action-box">
+        <button id="btn-auto-cluster" class="primary-btn cluster-btn">
+          <span class="btn-icon">🪄</span>
+          <span>Auto-Cluster Tabs with AI</span>
+        </button>
+        <p class="helper-text">Gemini clusters open tabs into native Brave colored groups</p>
+      </div>
+
+      <div class="groups-section-header">Active Brave Groups</div>
+      <div id="groups-list" class="groups-list">
+        <!-- Rendered via JS -->
+      </div>
+
+      <div class="groups-section-header">Ungrouped Tabs</div>
+      <div id="ungrouped-list" class="ungrouped-list">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- VIEW 3: STASH VAULT -->
+    <section id="view-vault" class="view-panel">
+      <div class="view-header">
+        <div>
+          <h2 class="section-title">Reading Vault</h2>
+          <p class="section-desc">Searchable archive of closed articles & takeaways</p>
+        </div>
+      </div>
+
+      <div class="vault-controls">
+        <input type="text" id="vault-search-input" class="search-input" placeholder="🔍 Search saved articles, topics, notes...">
+        <div class="vault-btn-row">
+          <button id="btn-copy-markdown" class="secondary-btn" title="Copy all to clipboard">📋 Copy Markdown</button>
+          <button id="btn-download-markdown" class="secondary-btn" title="Download .md file">📥 Download MD</button>
+        </div>
+      </div>
+
+      <div id="vault-items-container" class="vault-items-container">
+        <!-- Rendered via JS -->
+      </div>
+
+      <div id="vault-empty" class="empty-state hidden">
+        <div class="empty-icon">📭</div>
+        <h3>Vault is Empty</h3>
+        <p>Tabs you "Summarize & Close" or "Stash" will appear here.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>TabZen Settings</h3>
+        <button id="btn-close-settings" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="input-api-key">Google Gemini API Key</label>
+          <div class="input-with-action">
+            <input type="password" id="input-api-key" placeholder="AIzaSy...">
+            <button id="btn-toggle-key-visibility" class="small-btn">Show</button>
+          </div>
+          <small class="hint">
+            Get a free API key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer">Google AI Studio</a>.
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="select-stale-hours">Stale Tab Threshold</label>
+          <select id="select-stale-hours">
+            <option value="12">12 hours unvisited</option>
+            <option value="24" selected>24 hours unvisited (Default)</option>
+            <option value="48">48 hours unvisited</option>
+            <option value="72">3 days unvisited</option>
+            <option value="168">7 days unvisited</option>
+          </select>
+          <small class="hint">Tabs older than this will be prioritized for daily triage.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="select-model">AI Model</label>
+          <select id="select-model">
+            <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash (Fastest, Recommended)</option>
+            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-save-settings" class="primary-btn">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

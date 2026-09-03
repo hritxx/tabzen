@@ -31,7 +31,7 @@ import {
 // State
 let appSettings = {
   geminiApiKey: "",
-  model: "gemini-2.5-flash",
+  model: "gemini-2.5-pro",
   staleHours: 24,
   autoPromptThreshold: 15
 };
@@ -299,7 +299,7 @@ async function renderCurrentTriageCard() {
 
   currentCardTabInfo = tabData;
 
-  const result = await getTabTakeaway(appSettings.geminiApiKey, tabData);
+  const result = await getTabTakeaway(appSettings.geminiApiKey, tabData, appSettings.model);
   cardTakeaway.textContent = result.takeaway;
   cardReadTime.textContent = `⏱️ ${result.readTime}`;
   currentCardTabInfo.takeaway = result.takeaway;
@@ -309,11 +309,11 @@ async function renderCurrentTriageCard() {
 async function handleTriageSummarize() {
   if (!currentCardTabInfo) return;
   const originalHtml = btnTriageSummarize.innerHTML;
-  btnTriageSummarize.innerHTML = `<span class="btn-icon">⏳</span><span class="btn-text">Summarizing...</span>`;
+  btnTriageSummarize.innerHTML = `<span class="btn-icon">⏳</span><span class="btn-text">Summarizing with Pro...</span>`;
   btnTriageSummarize.disabled = true;
 
   try {
-    const deepResult = await getDeepSummary(appSettings.geminiApiKey, currentCardTabInfo);
+    const deepResult = await getDeepSummary(appSettings.geminiApiKey, currentCardTabInfo, appSettings.model);
     await addToVault({
       url: currentCardTabInfo.url,
       title: currentCardTabInfo.title,
@@ -377,7 +377,7 @@ async function handleAutoCluster() {
       return;
     }
 
-    const groupSpecs = await clusterTabsWithAI(appSettings.geminiApiKey, tabs);
+    const groupSpecs = await clusterTabsWithAI(appSettings.geminiApiKey, tabs, appSettings.model);
     const applied = await applyTabGroups(groupSpecs);
 
     showToast(`🪄 Created ${applied.length} colored tab groups!`);
@@ -623,7 +623,7 @@ async function openSettingsModal() {
   }
   inputApiKey.value = appSettings.geminiApiKey || "";
   selectStaleHours.value = String(appSettings.staleHours || 24);
-  selectModel.value = appSettings.model || "gemini-2.5-flash";
+  selectModel.value = appSettings.model || "gemini-2.5-pro";
   settingsModal.classList.remove("hidden");
 }
 

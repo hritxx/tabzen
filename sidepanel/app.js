@@ -40,7 +40,8 @@ let appSettings = {
   autoPromptThreshold: 15
 };
 let organizeScope = "current"; // "current" | "all"
-let triageFilterStaleOnly = false; // false = All tabs (oldest first), true = older than 24h
+let triageFilterStaleOnly = false; // false = All tabs (oldest first), true = older than stale threshold
+let triageAllWindows = false; // triage window scope, independent of the Groups scope
 let triageQueue = [];
 let currentTriageIndex = 0;
 let cachedVaultItems = [];
@@ -57,6 +58,8 @@ const viewPanels = document.querySelectorAll(".view-panel");
 // Triage Elements
 const btnTriageAll = document.getElementById("btn-triage-all");
 const btnTriageStale = document.getElementById("btn-triage-stale");
+const btnTriageScopeWindow = document.getElementById("btn-triage-scope-window");
+const btnTriageScopeAll = document.getElementById("btn-triage-scope-all");
 const cardSleepingIndicator = document.getElementById("card-sleeping-indicator");
 const triageBadge = document.getElementById("triage-badge");
 const triageProgress = document.getElementById("triage-progress");
@@ -121,7 +124,7 @@ function showToast(message, durationMs = 2800) {
 }
 
 function formatTimeAgo(timestamp) {
-  if (!timestamp) return "Recently";
+  if (!timestamp) return "Unknown";
   const diffMs = Date.now() - timestamp;
   const hours = Math.floor(diffMs / (1000 * 60 * 60));
   if (hours < 1) return "Just now";
@@ -139,6 +142,7 @@ initApp();
 async function initApp() {
   try {
     appSettings = await getSettings();
+    updateStalePillLabel();
   } catch (err) {
     console.warn("Could not load settings:", err);
   }
@@ -180,18 +184,31 @@ function setupEventListeners() {
   // Triage Filter Actions
   if (btnTriageAll) {
     btnTriageAll.addEventListener("click", async () => {
-      triageFilterStaleOnly = false;
-      btnTriageAll.classList.add("active");
-      btnTriageStale?.classList.remove("active");
-      await loadTriageQueue();
+      await setTriageFilter(false);
     });
   }
 
   if (btnTriageStale) {
     btnTriageStale.addEventListener("click", async () => {
-      triageFilterStaleOnly = true;
-      btnTriageStale.classList.add("active");
-      btnTriageAll?.classList.remove("active");
+      await setTriageFilter(true);
+    });
+  }
+
+  // Triage window-scope actions (independent of the Groups scope)
+  if (btnTriageScopeWindow) {
+    btnTriageScopeWindow.addEventListener("click", async () => {
+      triageAllWindows = false;
+      btnTriageScopeWindow.classList.add("active");
+      btnTriageScopeAll?.classList.remove("active");
+      await loadTriageQueue();
+    });
+  }
+
+  if (btnTriageScopeAll) {
+    btnTriageScopeAll.addEventListener("click", async () => {
+      triageAllWindows = true;
+      btnTriageScopeAll.classList.add("active");
+      btnTriageScopeWindow?.classList.remove("active");
       await loadTriageQueue();
     });
   }
@@ -202,7 +219,9 @@ function setupEventListeners() {
   if (btnTriageStash) btnTriageStash.addEventListener("click", handleTriageStash);
   if (btnTriageKeep) btnTriageKeep.addEventListener("click", handleTriageKeep);
   if (btnRefreshTriage) btnRefreshTriage.addEventListener("click", async () => {
-    await loadTriageQueue();
+    // The empty-state button promises "all tabs": reset the stale filter
+    // instead of reloading an empty stale queue (previous dead end).
+    await setTriageFilter(false);
   });
   if (cardTitle) cardTitle.addEventListener("click", () => {
     if (currentCardTabInfo?.id) {
@@ -383,11 +402,30 @@ async function refreshTabCounts() {
 
 async function loadTriageQueue() {
   const staleHours = Number(appSettings?.staleHours) || 24;
-  triageQueue = await getTriageTabs(triageFilterStaleOnly, staleHours, organizeScope === "all");
+  triageQueue = await getTriageTabs(triageFilterStaleOnly, staleHours, triageAllWindows);
   currentTriageIndex = 0;
   if (triageBadge) triageBadge.textContent = String(triageQueue.length);
 
   await renderCurrentTriageCard();
+}
+
+async function setTriageFilter(staleOnly) {
+  triageFilterStaleOnly = staleOnly;
+  if (staleOnly) {
+    btnTriageStale?.classList.add("active");
+    btnTriageAll?.classList.remove("active");
+  } else {
+    btnTriageAll?.classList.add("active");
+    btnTriageStale?.classList.remove("active");
+  }
+  await loadTriageQueue();
+}
+
+function updateStalePillLabel() {
+  if (!btnTriageStale) return;
+  const hours = Number(appSettings?.staleHours) || 24;
+  const label = hours % 24 === 0 ? `Stale (>${hours / 24}d)` : `Stale (>${hours}h)`;
+  btnTriageStale.textContent = label;
 }
 
 async function renderCurrentTriageCard() {
@@ -929,6 +967,7 @@ async function handleSaveSettings() {
     model: chosenModel
   });
   appSettings = updated;
+  updateStalePillLabel();
   closeSettingsModal();
   showToast(`Settings saved. Model: ${chosenModel}`);
   await loadTriageQueue();

@@ -3,6 +3,8 @@
 **Date:** 2026-09-03
 **Status: Implemented** (P0-1–P0-4, P1-1–P1-6, P2-1–P2-9, P2-12; verified with `node --check` + a pure-function smoke test)
 **Remaining:** P2-10 narrowed to a README privacy note (done); P2-11 test harness/CI still open.
+
+**Follow-up fix (triage queue):** unknown-age tabs fell back to `Date.now()`, silently excluding them from the stale filter — now `0` (oldest). Added a triage window-scope toggle (`This window` / `All windows`, decoupled from Groups scope), fixed the empty-state button reloading an empty stale queue instead of resetting to All, and made the stale pill label follow the threshold setting.
 **Scope:** `manifest.json`, `background/service-worker.js`, `lib/gemini.js`, `lib/tab-manager.js`, `lib/vault.js`, `sidepanel/app.js`, `sidepanel/index.html`
 **Method:** Full file reads + `node --check` (all pass) + manifest JSON validation (passes) + cross-referencing docs vs. code.
 **Related:** `docs/superpowers/specs/2026-09-04-brave-tab-copilot-design.md`, `docs/superpowers/plans/2026-09-04-brave-tab-copilot-implementation.md`

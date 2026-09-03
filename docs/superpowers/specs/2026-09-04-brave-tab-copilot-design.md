@@ -68,7 +68,8 @@ Key fields: MV3, `tabs`, `tabGroups`, `sidePanel`, `storage`, `alarms`, `scripti
   3. **📦 Vault** (Saved articles, search, and export)
 
 ### View 1: 🎯 Triage Deck ("Tinder for Tabs")
-- Targets tabs where `(Date.now() - tab.lastAccessed) > staleThreshold` (default 24h, configurable: 12h / 24h / 48h / 72h / 7d). An `All Tabs` / `Stale` pill toggles the filter.
+- Targets tabs where `(Date.now() - tab.lastAccessed) > staleThreshold` (default 24h, configurable: 12h / 24h / 48h / 72h / 7d). An `All Tabs` / `Stale` pill toggles the filter (stale pill label follows the setting); a `This window` / `All windows` pill scopes the deck independently of the Groups scope.
+- Tabs with unknown age (never recorded, no native timestamp) count as oldest: they sort first and qualify for the stale filter instead of disappearing from it.
 - Card UI features:
   - Host favicon + page title + domain name.
   - Timestamp indicator (e.g., `2 days ago`) + read time (e.g., `⏱️ 4 min`).

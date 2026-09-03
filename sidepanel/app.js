@@ -14,7 +14,7 @@ import {
   getCurrentWindowId,
   getManageableTabs,
   getAllManageableTabs,
-  getStaleTabs,
+  getTriageTabs,
   getActiveTabGroups,
   applyTabGroups,
   closeTab,
@@ -38,6 +38,7 @@ let appSettings = {
   autoPromptThreshold: 15
 };
 let organizeScope = "current"; // "current" | "all"
+let triageFilterStaleOnly = false; // false = All tabs (oldest first), true = older than 24h
 let triageQueue = [];
 let currentTriageIndex = 0;
 let cachedVaultItems = [];
@@ -49,6 +50,9 @@ const navButtons = document.querySelectorAll(".nav-btn");
 const viewPanels = document.querySelectorAll(".view-panel");
 
 // Triage Elements
+const btnTriageAll = document.getElementById("btn-triage-all");
+const btnTriageStale = document.getElementById("btn-triage-stale");
+const cardSleepingIndicator = document.getElementById("card-sleeping-indicator");
 const triageBadge = document.getElementById("triage-badge");
 const triageProgress = document.getElementById("triage-progress");
 const triageCard = document.getElementById("triage-card");
@@ -162,12 +166,31 @@ function setupEventListeners() {
     });
   });
 
+  // Triage Filter Actions
+  if (btnTriageAll) {
+    btnTriageAll.addEventListener("click", async () => {
+      triageFilterStaleOnly = false;
+      btnTriageAll.classList.add("active");
+      btnTriageStale?.classList.remove("active");
+      await loadTriageQueue();
+    });
+  }
+
+  if (btnTriageStale) {
+    btnTriageStale.addEventListener("click", async () => {
+      triageFilterStaleOnly = true;
+      btnTriageStale.classList.add("active");
+      btnTriageAll?.classList.remove("active");
+      await loadTriageQueue();
+    });
+  }
+
   // Triage Card Actions
   if (btnTriageSummarize) btnTriageSummarize.addEventListener("click", handleTriageSummarize);
   if (btnTriageStash) btnTriageStash.addEventListener("click", handleTriageStash);
   if (btnTriageKeep) btnTriageKeep.addEventListener("click", handleTriageKeep);
   if (btnRefreshTriage) btnRefreshTriage.addEventListener("click", async () => {
-    await loadTriageQueue(true);
+    await loadTriageQueue();
   });
   if (cardTitle) cardTitle.addEventListener("click", () => {
     if (currentCardTabInfo?.id) {
@@ -270,7 +293,9 @@ function switchView(viewName) {
     }
   });
 
-  if (viewName === "groups") {
+  if (viewName === "triage") {
+    loadTriageQueue();
+  } else if (viewName === "groups") {
     refreshGroupsView();
   } else if (viewName === "vault") {
     loadVault();
@@ -291,9 +316,9 @@ async function refreshTabCounts() {
   }
 }
 
-async function loadTriageQueue(includeAll = false) {
+async function loadTriageQueue() {
   const staleHours = Number(appSettings?.staleHours) || 24;
-  triageQueue = includeAll ? await getManageableTabs() : await getStaleTabs(staleHours);
+  triageQueue = await getTriageTabs(triageFilterStaleOnly, staleHours, organizeScope === "all");
   currentTriageIndex = 0;
   if (triageBadge) triageBadge.textContent = String(triageQueue.length);
 
@@ -306,6 +331,7 @@ async function renderCurrentTriageCard() {
     triageEmpty.classList.remove("hidden");
     triageProgress.textContent = "0 of 0";
     if (triageBadge) triageBadge.textContent = "0";
+    if (cardSleepingIndicator) cardSleepingIndicator.style.display = "none";
     currentCardTabInfo = null;
     return;
   }
@@ -331,27 +357,44 @@ async function renderCurrentTriageCard() {
   }
 
   cardAge.textContent = formatTimeAgo(tab.lastAccessed);
+  
+  // Show sleeping indicator if tab was discarded by auto-discard extension
+  if (cardSleepingIndicator) {
+    cardSleepingIndicator.style.display = tab.discarded ? "inline" : "none";
+  }
+
   cardReadTime.textContent = "⏱️ Estimating...";
-  cardTakeaway.textContent = "Analyzing page content with Gemini...";
+  cardTakeaway.textContent = "Analyzing page with Gemini...";
 
-  // Fetch page content
-  const content = await getPageSnippet(tab.id);
-  const tabData = {
-    id: tab.id,
-    title: tab.title,
-    url: tab.url,
-    favIconUrl: tab.favIconUrl,
-    description: content.description,
-    snippet: content.snippet
-  };
+  try {
+    // Only attempt DOM extraction if tab is active (NOT discarded/sleeping)
+    let content = { description: "", snippet: "" };
+    if (!tab.discarded) {
+      content = await getPageSnippet(tab.id);
+    }
 
-  currentCardTabInfo = tabData;
+    const tabData = {
+      id: tab.id,
+      title: tab.title,
+      url: tab.url,
+      favIconUrl: tab.favIconUrl,
+      description: content.description,
+      snippet: content.snippet,
+      discarded: tab.discarded
+    };
 
-  const result = await getTabTakeaway(appSettings.geminiApiKey, tabData, appSettings.model);
-  cardTakeaway.textContent = result.takeaway;
-  cardReadTime.textContent = `⏱️ ${result.readTime}`;
-  currentCardTabInfo.takeaway = result.takeaway;
-  currentCardTabInfo.readTime = result.readTime;
+    currentCardTabInfo = tabData;
+
+    const result = await getTabTakeaway(appSettings.geminiApiKey, tabData, appSettings.model);
+    cardTakeaway.textContent = result.takeaway;
+    cardReadTime.textContent = `⏱️ ${result.readTime}`;
+    currentCardTabInfo.takeaway = result.takeaway;
+    currentCardTabInfo.readTime = result.readTime;
+  } catch (err) {
+    console.warn("Triage analysis error:", err);
+    cardTakeaway.textContent = `Summary: ${tab.title}`;
+    cardReadTime.textContent = "⏱️ 3 min";
+  }
 }
 
 async function handleTriageSummarize() {
@@ -413,22 +456,35 @@ function handleTriageKeep() {
   renderCurrentTriageCard();
 }
 
+/**
+ * Auto-Cluster Tabs:
+ * - Includes both ungrouped tabs AND tabs already inside existing groups for a complete fresh reorganization.
+ * - In "current" scope: strictly only affects current window.
+ * - In "all" scope: organizes tabs across all windows.
+ */
 async function handleAutoCluster() {
   const originalHtml = btnAutoCluster.innerHTML;
   btnAutoCluster.innerHTML = `<span class="btn-icon">⏳</span><span>Clustering tabs with ${appSettings.model}...</span>`;
   btnAutoCluster.disabled = true;
 
   try {
-    const tabs = organizeScope === "all" ? await getAllManageableTabs() : await getManageableTabs();
+    const currentWindowId = await getCurrentWindowId();
+    // In "current" scope: strictly query current window
+    // In "all" scope: query all windows
+    const tabs = organizeScope === "all" ? await getAllManageableTabs() : await getManageableTabs(currentWindowId);
+    
     if (tabs.length === 0) {
       showToast("No active tabs to organize.");
       return;
     }
 
     const groupSpecs = await clusterTabsWithAI(appSettings.geminiApiKey, tabs, appSettings.model);
-    const applied = await applyTabGroups(groupSpecs, null);
+    
+    // In "current" scope: filterToWindowId = currentWindowId ensures other windows are NEVER touched
+    const filterWinId = organizeScope === "all" ? null : currentWindowId;
+    const applied = await applyTabGroups(groupSpecs, null, filterWinId);
 
-    const scopeText = organizeScope === "all" ? "across all windows" : "in current window";
+    const scopeText = organizeScope === "all" ? "across all windows" : "in this window";
     showToast(`🪄 Organized ${tabs.length} tabs into ${applied.length} colored groups ${scopeText}!`);
     await refreshGroupsView();
     await refreshTabCounts();
@@ -440,6 +496,9 @@ async function handleAutoCluster() {
   }
 }
 
+/**
+ * Consolidate all tabs from all open windows into the current window and group them
+ */
 async function handleConsolidateWindows() {
   if (!btnConsolidateWindows) return;
   const originalHtml = btnConsolidateWindows.innerHTML;
@@ -447,17 +506,18 @@ async function handleConsolidateWindows() {
   btnConsolidateWindows.disabled = true;
 
   try {
+    const currentWindowId = await getCurrentWindowId();
     const allTabs = await getAllManageableTabs();
     if (allTabs.length === 0) {
       showToast("No active tabs found.");
       return;
     }
 
-    const currentWindowId = await getCurrentWindowId();
     const groupSpecs = await clusterTabsWithAI(appSettings.geminiApiKey, allTabs, appSettings.model);
-    const applied = await applyTabGroups(groupSpecs, currentWindowId);
+    // Consolidate into current window
+    const applied = await applyTabGroups(groupSpecs, currentWindowId, null);
 
-    showToast(`🪟 Consolidated ${allTabs.length} tabs into ${applied.length} groups in this window!`);
+    showToast(`🪟 Consolidated & grouped ${allTabs.length} tabs into this window!`);
     await refreshGroupsView();
     await refreshTabCounts();
   } catch (err) {
@@ -469,8 +529,9 @@ async function handleConsolidateWindows() {
 }
 
 async function refreshGroupsView() {
-  const tabs = await getManageableTabs();
-  const groups = await getActiveTabGroups();
+  const currentWindowId = await getCurrentWindowId();
+  const tabs = organizeScope === "all" ? await getAllManageableTabs() : await getManageableTabs(currentWindowId);
+  const groups = await getActiveTabGroups(organizeScope === "all" ? null : currentWindowId);
 
   groupsList.innerHTML = "";
   ungroupedList.innerHTML = "";
@@ -533,7 +594,8 @@ async function refreshGroupsView() {
 
         const rowTitle = document.createElement("span");
         rowTitle.className = "tab-title-text";
-        rowTitle.textContent = t.title;
+        rowTitle.textContent = t.discarded ? `💤 ${t.title}` : t.title;
+        rowTitle.title = t.url;
         rowTitle.addEventListener("click", () => activateTab(t.id));
 
         const closeBtn = document.createElement("button");
@@ -560,7 +622,7 @@ async function refreshGroupsView() {
   if (ungroupedTabs.length === 0) {
     const emptyP = document.createElement("p");
     emptyP.style.cssText = "font-size:12px; color:var(--text-secondary);";
-    emptyP.textContent = "All tabs in this window are grouped.";
+    emptyP.textContent = "All tabs are grouped.";
     ungroupedList.appendChild(emptyP);
   } else {
     for (const t of ungroupedTabs) {
@@ -569,7 +631,8 @@ async function refreshGroupsView() {
 
       const rowTitle = document.createElement("span");
       rowTitle.className = "tab-title-text";
-      rowTitle.textContent = t.title;
+      rowTitle.textContent = t.discarded ? `💤 ${t.title}` : t.title;
+      rowTitle.title = t.url;
       rowTitle.addEventListener("click", () => activateTab(t.id));
 
       const closeBtn = document.createElement("button");

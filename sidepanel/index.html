@@ -50,6 +50,14 @@
         <span id="triage-progress" class="counter-text">0 of 0</span>
       </div>
 
+      <div class="triage-filter-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div class="pill-toggle">
+          <button id="btn-triage-all" class="pill-btn active" type="button">All Tabs</button>
+          <button id="btn-triage-stale" class="pill-btn" type="button">Stale (>24h)</button>
+        </div>
+        <span id="card-sleeping-indicator" class="hint" style="font-size:10px; color:var(--text-muted); display:none;">💤 Sleeping Tab</span>
+      </div>
+
       <div id="triage-card-wrapper" class="card-wrapper">
         <!-- Active Triage Card (Rendered via JS) -->
         <div id="triage-card" class="triage-card">

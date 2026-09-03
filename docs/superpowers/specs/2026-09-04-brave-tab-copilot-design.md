@@ -113,7 +113,7 @@ Key fields: MV3, `tabs`, `tabGroups`, `sidePanel`, `storage`, `alarms`, `scripti
 
 ### 1. Semantic Tab Clustering
 - Organizes **every** input tab into 2–8 topical groups (prompt instructs 2–8; any tabs the model omits are backfilled via the offline heuristic so coverage is 100%).
-- **System Prompt** (see `lib/gemini.js` `clusterTabsWithAI` for the authoritative text): expert-organizer framing, emoji-prefixed 1–3 word titles, no generic bucket names, strict color set, strict JSON schema (`{ groups: [{ name, color, tabIds }] }`).
+- **System Prompt** (see `lib/gemini.js` `clusterTabsWithAI` for the authoritative text): expert-organizer framing, plain-text 1–3 word titles (no emoji, enterprise-minimal group names), no generic bucket names, strict color set, strict JSON schema (`{ groups: [{ name, color, tabIds }] }`).
 - **Execution**:
   Iterates over returned groups, calls `chrome.tabs.group({ tabIds })`, followed by `chrome.tabGroups.update(groupId, { title, color })`.
 

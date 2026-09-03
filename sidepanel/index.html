@@ -18,21 +18,23 @@
     </div>
     <div class="header-actions">
       <span id="header-tab-count" class="tab-badge" title="Total open tabs">0 tabs</span>
-      <button id="btn-open-settings" class="icon-btn" title="Settings">⚙️</button>
+      <button id="btn-open-settings" class="icon-btn" title="Settings" aria-label="Settings">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"/></svg>
+      </button>
     </div>
   </header>
 
   <!-- Navigation Bar -->
   <nav class="nav-bar">
     <button class="nav-btn active" data-view="triage">
-      <span>🎯 Triage</span>
+      <span>Triage</span>
       <span id="triage-badge" class="nav-badge">0</span>
     </button>
     <button class="nav-btn" data-view="groups">
-      <span>📑 Groups</span>
+      <span>Groups</span>
     </button>
     <button class="nav-btn" data-view="vault">
-      <span>📦 Vault</span>
+      <span>Vault</span>
       <span id="vault-badge" class="nav-badge">0</span>
     </button>
   </nav>
@@ -66,13 +68,13 @@
               <span id="card-hostname" class="domain-text">example.com</span>
             </div>
             <div class="card-badges">
-              <span id="card-sleeping-indicator" class="age-badge sleeping-badge">💤 Sleeping</span>
+              <span id="card-sleeping-indicator" class="age-badge sleeping-badge">Sleeping</span>
               <span id="card-age" class="age-badge">2 days ago</span>
             </div>
           </div>
 
           <h3 id="card-title" class="card-title">Loading tab...</h3>
-          <div class="card-read-time" id="card-read-time">⏱️ 4 min read</div>
+          <div class="card-read-time" id="card-read-time">—</div>
 
           <div class="card-summary-box">
             <div class="summary-label">AI Takeaway</div>
@@ -81,67 +83,62 @@
           </div>
 
           <div class="card-actions">
-            <button id="btn-triage-summarize" class="action-btn btn-summarize" title="Deep summary & close tab">
-              <span class="btn-icon">⚡</span>
+            <button id="btn-triage-summarize" class="action-btn btn-summarize" title="Deep summary and close tab">
               <span class="btn-text">Summarize & Close</span>
             </button>
-            <button id="btn-triage-stash" class="action-btn btn-stash" title="Save link to vault & close tab">
-              <span class="btn-icon">📦</span>
-              <span class="btn-text">Stash Vault</span>
+            <button id="btn-triage-stash" class="action-btn btn-stash" title="Save link to vault and close tab">
+              <span class="btn-text">Stash</span>
             </button>
             <button id="btn-triage-keep" class="action-btn btn-keep" title="Leave open and move next">
-              <span class="btn-icon">⏳</span>
-              <span class="btn-text">Keep Open</span>
+              <span class="btn-text">Keep</span>
             </button>
           </div>
         </div>
 
         <!-- Empty Triage State -->
         <div id="triage-empty" class="empty-state hidden">
-          <div class="empty-icon">🎉</div>
-          <h3>Inbox Zero!</h3>
-          <p>No stale tabs pending. Your reading backlog is fully cleared.</p>
-          <button id="btn-refresh-triage" class="primary-btn">Check All Tabs</button>
+          <h3>Inbox Zero</h3>
+          <p>No tabs pending. Your reading backlog is clear.</p>
+          <button id="btn-refresh-triage" class="primary-btn">Check all tabs</button>
         </div>
       </div>
     </section>
 
     <!-- VIEW 2: ACTIVE GROUPS -->
     <section id="view-groups" class="view-panel">
-      <div class="view-header">
-        <div>
-          <h2 class="section-title">Tab Groups</h2>
-          <p class="section-desc">Organize windows into semantic color groups</p>
-        </div>
-      </div>
-
-      <div class="cluster-action-box">
-        <div class="scope-toggle-row">
-          <span class="scope-label">Scope:</span>
-          <div class="pill-toggle">
-            <button id="btn-scope-current" class="pill-btn active" type="button">Current Window</button>
-            <button id="btn-scope-all" class="pill-btn" type="button">All Open Windows</button>
+        <div class="view-header">
+          <div>
+            <h2 class="section-title">Tab Groups</h2>
+            <p class="section-desc">Cluster tabs into color-coded groups</p>
           </div>
         </div>
 
-        <div class="cluster-button-group">
-          <button id="btn-auto-cluster" class="primary-btn cluster-btn">
-            <span class="btn-icon">🪄</span>
-            <span id="cluster-btn-label">Organize Current Window with AI</span>
-          </button>
-          <button id="btn-consolidate-windows" class="secondary-btn cluster-btn hidden">
-            <span>🪟 Pull & Group All Windows Into This Window</span>
-          </button>
-        </div>
-        <p id="cluster-helper-text" class="helper-text">100% of tabs will be classified into cohesive Brave groups</p>
-      </div>
+        <div class="cluster-action-box">
+          <div class="scope-toggle-row">
+            <span class="scope-label">Scope</span>
+            <div class="pill-toggle">
+              <button id="btn-scope-current" class="pill-btn active" type="button">Current window</button>
+              <button id="btn-scope-all" class="pill-btn" type="button">All windows</button>
+            </div>
+          </div>
 
-      <div class="groups-section-header">Active Brave Groups</div>
+          <div class="cluster-button-group">
+            <button id="btn-auto-cluster" class="primary-btn cluster-btn">
+              <span id="cluster-btn-label">Organize current window</span>
+            </button>
+            <button id="btn-consolidate-windows" class="secondary-btn cluster-btn hidden">
+              <span>Pull all windows into this one</span>
+            </button>
+          </div>
+          <p id="cluster-helper-text" class="helper-text">Every tab is classified into a color-coded group.</p>
+        </div>
+
+        <div class="groups-section-header">Active groups</div>
       <div id="groups-list" class="groups-list">
         <!-- Rendered via JS -->
       </div>
 
-      <div class="groups-section-header">Ungrouped Tabs</div>
+      <div class="groups-section-header">Ungrouped</div>
       <div id="ungrouped-list" class="ungrouped-list">
         <!-- Rendered via JS -->
       </div>
@@ -157,10 +154,10 @@
       </div>
 
       <div class="vault-controls">
-        <input type="text" id="vault-search-input" class="search-input" placeholder="🔍 Search saved articles, topics, notes...">
+        <input type="text" id="vault-search-input" class="search-input" placeholder="Search saved articles, topics, notes...">
         <div class="vault-btn-row">
-          <button id="btn-copy-markdown" class="secondary-btn" title="Copy all to clipboard">📋 Copy Markdown</button>
-          <button id="btn-download-markdown" class="secondary-btn" title="Download .md file">📥 Download MD</button>
+          <button id="btn-copy-markdown" class="secondary-btn" title="Copy all to clipboard">Copy Markdown</button>
+          <button id="btn-download-markdown" class="secondary-btn" title="Download .md file">Download .md</button>
         </div>
       </div>
 
@@ -169,9 +166,8 @@
       </div>
 
       <div id="vault-empty" class="empty-state hidden">
-        <div class="empty-icon">📭</div>
-        <h3>Vault is Empty</h3>
-        <p>Tabs you "Summarize & Close" or "Stash" will appear here.</p>
+        <h3>Vault is empty</h3>
+        <p>Tabs you summarize or stash will appear here.</p>
       </div>
     </section>
   </main>
@@ -210,7 +206,7 @@
         <div class="form-group">
           <div class="form-row-split">
             <label for="select-model">AI Model</label>
-            <button id="btn-fetch-models" type="button" class="secondary-btn btn-fetch-models" title="Query Google API for models supported on your key">🔄 Load Available Models</button>
+            <button id="btn-fetch-models" type="button" class="secondary-btn btn-fetch-models" title="Query Google API for models supported on your key">Load models</button>
           </div>
           <select id="select-model">
             <optgroup id="optgroup-standard-models" label="Supported Gemini Models">

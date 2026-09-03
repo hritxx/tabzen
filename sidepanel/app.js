@@ -216,7 +216,7 @@ function setupEventListeners() {
       organizeScope = "current";
       btnScopeCurrent.classList.add("active");
       btnScopeAll?.classList.remove("active");
-      if (clusterBtnLabel) clusterBtnLabel.textContent = "Organize Current Window with AI";
+      if (clusterBtnLabel) clusterBtnLabel.textContent = "Organize current window";
       btnConsolidateWindows?.classList.add("hidden");
     });
   }
@@ -226,7 +226,7 @@ function setupEventListeners() {
       organizeScope = "all";
       btnScopeAll.classList.add("active");
       btnScopeCurrent?.classList.remove("active");
-      if (clusterBtnLabel) clusterBtnLabel.textContent = "Organize All Windows (In-Place)";
+      if (clusterBtnLabel) clusterBtnLabel.textContent = "Organize all windows";
       btnConsolidateWindows?.classList.remove("hidden");
     });
   }
@@ -271,7 +271,7 @@ function setupEventListeners() {
         showToast("Please enter an API key first.");
         return;
       }
-      btnFetchModels.textContent = "⏳ Fetching...";
+      btnFetchModels.textContent = "Loading...";
       btnFetchModels.disabled = true;
       try {
         const models = await fetchAvailableModels(key);
@@ -297,14 +297,14 @@ function setupEventListeners() {
             if (inputCustomModel) inputCustomModel.value = appSettings.model;
           }
           customModelContainer?.classList.add("hidden");
-          showToast(`Loaded ${models.length} models from your Google account!`);
+          showToast(`Loaded ${models.length} models.`);
         } else {
           showToast("Could not retrieve models. Please check your API key.");
         }
       } catch (err) {
         showToast("Fetch error: " + err.message);
       } finally {
-        btnFetchModels.textContent = "🔄 Load Available Models";
+        btnFetchModels.textContent = "Load models";
         btnFetchModels.disabled = false;
       }
     });
@@ -370,11 +370,11 @@ async function refreshTabCounts() {
 
   if (headerTabCount) {
     if (allTabs.length > currentTabs.length) {
-      const sleepStr = allSleeping > 0 ? ` • 💤 ${allSleeping}` : "";
+      const sleepStr = allSleeping > 0 ? ` · ${allSleeping} sleeping` : "";
       headerTabCount.textContent = `${currentTabs.length} tabs (${allTabs.length} total${sleepStr})`;
       headerTabCount.title = `${currentTabs.length} tabs in this window (${currentSleeping} sleeping), ${allTabs.length} across all windows (${allSleeping} sleeping)`;
     } else {
-      const sleepStr = currentSleeping > 0 ? ` (💤 ${currentSleeping} sleeping)` : "";
+      const sleepStr = currentSleeping > 0 ? ` · ${currentSleeping} sleeping` : "";
       headerTabCount.textContent = `${currentTabs.length} tabs${sleepStr}`;
       headerTabCount.title = `${currentTabs.length} open tabs, ${currentSleeping} sleeping in background`;
     }
@@ -505,7 +505,7 @@ async function loadCurrentTakeaway() {
 async function handleTriageSummarize() {
   if (!currentCardTabInfo) return;
   const originalHtml = btnTriageSummarize.innerHTML;
-  btnTriageSummarize.innerHTML = `<span class="btn-icon">⏳</span><span class="btn-text">Summarizing...</span>`;
+  btnTriageSummarize.innerHTML = `<span class="btn-text">Summarizing...</span>`;
   btnTriageSummarize.disabled = true;
 
   try {
@@ -531,7 +531,7 @@ async function handleTriageSummarize() {
     });
 
     await closeTab(currentCardTabInfo.id);
-    showToast("⚡ Summarized and saved to Vault!");
+    showToast("Summarized and saved to Vault.");
     currentTriageIndex++;
     await renderCurrentTriageCard();
     await refreshTabCounts();
@@ -557,7 +557,7 @@ async function handleTriageStash() {
     });
 
     await closeTab(currentCardTabInfo.id);
-    showToast("📦 Stashed to Vault!");
+    showToast("Stashed to Vault.");
     currentTriageIndex++;
     await renderCurrentTriageCard();
     await refreshTabCounts();
@@ -580,7 +580,7 @@ function handleTriageKeep() {
  */
 async function handleAutoCluster() {
   const originalHtml = btnAutoCluster.innerHTML;
-  btnAutoCluster.innerHTML = `<span class="btn-icon">⏳</span><span>Clustering tabs with ${appSettings.model}...</span>`;
+  btnAutoCluster.innerHTML = `<span>Organizing with ${appSettings.model}...</span>`;
   btnAutoCluster.disabled = true;
 
   try {
@@ -601,7 +601,7 @@ async function handleAutoCluster() {
     const applied = await applyTabGroups(groupSpecs, null, filterWinId);
 
     const scopeText = organizeScope === "all" ? "across all windows" : "in this window";
-    showToast(`🪄 Organized ${tabs.length} tabs into ${applied.length} colored groups ${scopeText}!`);
+    showToast(`Organized ${tabs.length} tabs into ${applied.length} groups ${scopeText}.`);
     await refreshGroupsView();
     await refreshTabCounts();
   } catch (err) {
@@ -618,7 +618,7 @@ async function handleAutoCluster() {
 async function handleConsolidateWindows() {
   if (!btnConsolidateWindows) return;
   const originalHtml = btnConsolidateWindows.innerHTML;
-  btnConsolidateWindows.innerHTML = `<span>⏳ Consolidating & grouping with ${appSettings.model}...</span>`;
+  btnConsolidateWindows.innerHTML = `<span>Consolidating with ${appSettings.model}...</span>`;
   btnConsolidateWindows.disabled = true;
 
   try {
@@ -633,7 +633,7 @@ async function handleConsolidateWindows() {
     // Consolidate into current window
     const applied = await applyTabGroups(groupSpecs, currentWindowId, null);
 
-    showToast(`🪟 Consolidated & grouped ${allTabs.length} tabs into this window!`);
+    showToast(`Consolidated ${allTabs.length} tabs into this window.`);
     await refreshGroupsView();
     await refreshTabCounts();
   } catch (err) {
@@ -668,7 +668,7 @@ async function refreshGroupsView() {
   if (groups.length === 0) {
     const emptyP = document.createElement("p");
     emptyP.style.cssText = "font-size:12px; color:var(--text-secondary);";
-    emptyP.textContent = "No tab groups created yet. Click Auto-Cluster above!";
+    emptyP.textContent = "No groups yet. Organize to create some.";
     groupsList.appendChild(emptyP);
   } else {
     for (const group of groups) {
@@ -693,7 +693,7 @@ async function refreshGroupsView() {
 
       const closeGroupBtn = document.createElement("button");
       closeGroupBtn.className = "secondary-btn";
-      closeGroupBtn.textContent = "Close Group";
+      closeGroupBtn.textContent = "Close group";
       closeGroupBtn.addEventListener("click", async () => {
         await closeTabGroup(group.id);
         await refreshGroupsView();
@@ -710,7 +710,7 @@ async function refreshGroupsView() {
 
         const rowTitle = document.createElement("span");
         rowTitle.className = "tab-title-text";
-        rowTitle.textContent = t.discarded ? `💤 ${t.title}` : t.title;
+        rowTitle.textContent = t.discarded ? `Sleeping · ${t.title}` : t.title;
         rowTitle.title = t.url;
         rowTitle.addEventListener("click", () => activateTab(t.id));
 
@@ -747,7 +747,7 @@ async function refreshGroupsView() {
 
       const rowTitle = document.createElement("span");
       rowTitle.className = "tab-title-text";
-      rowTitle.textContent = t.discarded ? `💤 ${t.title}` : t.title;
+      rowTitle.textContent = t.discarded ? `Sleeping · ${t.title}` : t.title;
       rowTitle.title = t.url;
       rowTitle.addEventListener("click", () => activateTab(t.id));
 
@@ -804,7 +804,7 @@ function renderVaultItems(query = "") {
     const domainSpan = document.createElement("span");
     domainSpan.textContent = `${domain} • ${formatTimeAgo(item.stashedAt)}`;
     const readTimeSpan = document.createElement("span");
-    readTimeSpan.textContent = `⏱️ ${item.readTime || "3 min"}`;
+    readTimeSpan.textContent = `${item.readTime || "3 min"}`;
     metaEl.appendChild(domainSpan);
     metaEl.appendChild(readTimeSpan);
 
@@ -834,7 +834,7 @@ function renderVaultItems(query = "") {
 
     const openBtn = document.createElement("button");
     openBtn.className = "secondary-btn";
-    openBtn.textContent = "Open Tab";
+    openBtn.textContent = "Open";
     openBtn.addEventListener("click", () => openTab(item.url));
 
     const delBtn = document.createElement("button");
@@ -873,7 +873,7 @@ async function handleCopyMarkdown() {
   }
   const md = generateMarkdown(cachedVaultItems);
   await navigator.clipboard.writeText(md);
-  showToast("📋 Copied all vault summaries to clipboard!");
+  showToast("Vault copied to clipboard.");
 }
 
 function handleDownloadMarkdown() {
@@ -890,7 +890,7 @@ function handleDownloadMarkdown() {
   a.download = `tabzen-vault-${dateStr}.md`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast("📥 Downloaded vault markdown file!");
+  showToast("Vault downloaded.");
 }
 
 async function openSettingsModal() {
@@ -930,6 +930,6 @@ async function handleSaveSettings() {
   });
   appSettings = updated;
   closeSettingsModal();
-  showToast(`Settings saved! Active model: ${chosenModel}`);
+  showToast(`Settings saved. Model: ${chosenModel}`);
   await loadTriageQueue();
 }

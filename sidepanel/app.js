@@ -27,7 +27,8 @@ import {
 import {
   clusterTabsWithAI,
   getTabTakeaway,
-  getDeepSummary
+  getDeepSummary,
+  fetchAvailableModels
 } from "../lib/gemini.js";
 
 // State
@@ -93,6 +94,8 @@ const inputApiKey = document.getElementById("input-api-key");
 const btnToggleKeyVisibility = document.getElementById("btn-toggle-key-visibility");
 const selectStaleHours = document.getElementById("select-stale-hours");
 const selectModel = document.getElementById("select-model");
+const optgroupStandardModels = document.getElementById("optgroup-standard-models");
+const btnFetchModels = document.getElementById("btn-fetch-models");
 const customModelContainer = document.getElementById("custom-model-container");
 const inputCustomModel = document.getElementById("input-custom-model");
 const btnSaveSettings = document.getElementById("btn-save-settings");
@@ -251,6 +254,46 @@ function setupEventListeners() {
       }
     });
   }
+  if (btnFetchModels) {
+    btnFetchModels.addEventListener("click", async () => {
+      const key = inputApiKey.value.trim() || appSettings.geminiApiKey;
+      if (!key) {
+        showToast("Please enter an API key first.");
+        return;
+      }
+      btnFetchModels.textContent = "⏳ Fetching...";
+      btnFetchModels.disabled = true;
+      try {
+        const models = await fetchAvailableModels(key);
+        if (models && models.length > 0 && optgroupStandardModels) {
+          optgroupStandardModels.innerHTML = "";
+          for (const m of models) {
+            const opt = document.createElement("option");
+            opt.value = m;
+            opt.textContent = m;
+            optgroupStandardModels.appendChild(opt);
+          }
+          if (models.includes(appSettings.model)) {
+            selectModel.value = appSettings.model;
+          } else if (models.includes("gemini-3.6-flash")) {
+            selectModel.value = "gemini-3.6-flash";
+          } else {
+            selectModel.value = models[0];
+          }
+          customModelContainer?.classList.add("hidden");
+          showToast(`Loaded ${models.length} models from your Google account!`);
+        } else {
+          showToast("Could not retrieve models. Please check your API key.");
+        }
+      } catch (err) {
+        showToast("Fetch error: " + err.message);
+      } finally {
+        btnFetchModels.textContent = "🔄 Load Available Models";
+        btnFetchModels.disabled = false;
+      }
+    });
+  }
+
   if (selectModel) {
     selectModel.addEventListener("change", () => {
       if (selectModel.value === "custom") {

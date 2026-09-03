@@ -205,16 +205,17 @@
         </div>
 
         <div class="form-group">
-          <label for="select-model">AI Model (Gemini Series 3, Pro & Flash)</label>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label for="select-model">AI Model</label>
+            <button id="btn-fetch-models" type="button" class="secondary-btn" style="padding: 2px 8px; font-size: 10px;" title="Query Google API for models supported on your key">🔄 Load Available Models</button>
+          </div>
           <select id="select-model">
-            <optgroup label="Gemini Series 3 (Recommended)">
-              <option value="gemini-3.1-pro" selected>Gemini 3.1 Pro (Latest Series 3 Frontier Pro)</option>
-              <option value="gemini-3-pro">Gemini 3 Pro</option>
+            <optgroup id="optgroup-standard-models" label="Supported Gemini Models">
+              <option value="gemini-3.6-flash" selected>Gemini 3.6 Flash (Fast & Recommended)</option>
+              <option value="gemini-3.1-pro">Gemini 3.1 Pro (Frontier Flagship Pro)</option>
               <option value="gemini-3.8-flash">Gemini 3.8 Flash (High Speed Series 3)</option>
-              <option value="gemini-3.6-flash">Gemini 3.6 Flash (Fast & Efficient Series 3)</option>
-              <option value="gemini-3-flash">Gemini 3 Flash</option>
             </optgroup>
-            <optgroup label="Custom">
+            <optgroup id="optgroup-custom-models" label="Custom">
               <option value="custom">Custom Model ID...</option>
             </optgroup>
           </select>
@@ -222,8 +223,8 @@
 
         <div id="custom-model-container" class="form-group hidden">
           <label for="input-custom-model">Custom Model ID</label>
-          <input type="text" id="input-custom-model" placeholder="e.g. gemini-3.1-pro, gemini-3.8-flash">
-          <small class="hint">Enter any Google Gemini model identifier supported by your API key.</small>
+          <input type="text" id="input-custom-model" placeholder="e.g. gemini-3.6-flash, gemini-3.1-pro">
+          <small class="hint">Enter any model identifier supported by your Google Gemini key.</small>
         </div>
       </div>
       <div class="modal-footer">
